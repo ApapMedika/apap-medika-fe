@@ -30,7 +30,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginData) => {
     setIsLoading(true);
     try {
-      await login(data.email, data.password);
+      await login({ email: data.email, password: data.password });
     } catch (error) {
       // Error is handled in auth context
     } finally {

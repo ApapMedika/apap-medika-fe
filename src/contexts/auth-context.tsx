@@ -1,9 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import Cookies from 'js-cookie';
-import { apiClient } from '@/lib/api';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 interface User {
@@ -11,120 +9,182 @@ interface User {
   name: string;
   username: string;
   email: string;
-  role: 'admin' | 'doctor' | 'nurse' | 'pharmacist' | 'patient';
-  profile?: any;
+  role: string;
+  gender: boolean;
+  createdAt: string;
+  patient?: {
+    nik: string;
+    birthPlace: string;
+    birthDate: string;
+    pClass: number;
+    insuranceLimit: number;
+    availableLimit: number;
+  };
+  doctor?: {
+    specialization: number;
+    yearsOfExperience: number;
+    fee: number;
+    schedules: number[];
+  };
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (data: any) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  login: (credentials: { email: string; password: string }) => Promise<void>;
+  signup: (userData: any) => Promise<void>;
+  logout: () => void;
+  updateUser: (userData: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
-    const initAuth = async () => {
-      const token = Cookies.get('token');
-      const savedUser = Cookies.get('user');
-
-      if (token && savedUser) {
-        try {
-          const userData = JSON.parse(savedUser);
-          setUser(userData);
-        } catch (error) {
-          console.error('Failed to parse saved user:', error);
-          Cookies.remove('token');
-          Cookies.remove('user');
-        }
-      }
-      setLoading(false);
-    };
-
-    initAuth();
+    checkAuth();
   }, []);
 
-  // Redirect logic
-  useEffect(() => {
-    if (!loading) {
-      const isAuthPage = pathname === '/login' || pathname === '/signup';
-      const isDashboardPage = pathname.startsWith('/dashboard');
-      
-      if (user && isAuthPage) {
-        router.push('/dashboard');
-      } else if (!user && isDashboardPage) {
-        router.push('/login');
-      }
-    }
-  }, [user, loading, pathname, router]);
-
-  const login = async (email: string, password: string) => {
+  const checkAuth = async () => {
     try {
-      const response = await apiClient.login(email, password);
-      const { token, user: userData } = response;
-      
-      Cookies.set('token', token, { expires: 7 });
-      Cookies.set('user', JSON.stringify(userData), { expires: 7 });
-      
-      setUser(userData);
-      
-      toast.success('Login successful');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      // Validate token and get user data
+      const response = await fetch(`${API_BASE_URL}/profile/users/me/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        // Token is invalid, remove it
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const login = async (credentials: { email: string; password: string }) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/profile/login/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Store token and user data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+
+      toast.success('Login successful!');
       router.push('/dashboard');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Login failed');
+      console.error('Login error:', error);
+      toast.error(error.message || 'Login failed');
       throw error;
     }
   };
 
-  const signup = async (data: any) => {
+  const signup = async (userData: any) => {
     try {
-      const response = await apiClient.signup(data);
-      const { token, user: userData } = response;
-      
-      Cookies.set('token', token, { expires: 7 });
-      Cookies.set('user', JSON.stringify(userData), { expires: 7 });
-      
-      setUser(userData);
-      
-      toast.success('Registration successful');
+      const response = await fetch(`${API_BASE_URL}/profile/signup/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Signup failed');
+      }
+
+      // Store token and user data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+
+      toast.success('Account created successfully!');
       router.push('/dashboard');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      console.error('Signup error:', error);
+      toast.error(error.message || 'Signup failed');
       throw error;
     }
   };
 
   const logout = async () => {
     try {
-      await apiClient.logout();
+      const token = localStorage.getItem('token');
+      
+      // Try to call logout endpoint, but don't fail if it doesn't work
+      if (token) {
+        try {
+          await fetch(`${API_BASE_URL}/profile/logout/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+        } catch (error) {
+          // Ignore logout endpoint errors - still clear local storage
+          console.warn('Logout endpoint failed, but clearing local storage:', error);
+        }
+      }
+
+      // Clear local storage and state
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      
+      toast.success('Logged out successfully');
+      router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      Cookies.remove('token');
-      Cookies.remove('user');
+      // Still clear local storage even if API call fails
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       setUser(null);
-      toast.success('Logged out successfully');
       router.push('/login');
     }
   };
 
-  const refreshUser = async () => {
-    try {
-      const userData = await apiClient.getProfile();
-      setUser(userData);
-      Cookies.set('user', JSON.stringify(userData), { expires: 7 });
-    } catch (error) {
-      console.error('Failed to refresh user:', error);
-    }
+  const updateUser = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
   };
 
   const value = {
@@ -133,10 +193,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     signup,
     logout,
-    refreshUser,
+    updateUser,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

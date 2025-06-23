@@ -3,70 +3,72 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api';
-import { formatCurrency, formatDate } from '@/utils/format';
-import { PATIENT_CLASSES } from '@/utils/constants';
+import { formatDate, formatCurrency, calculateAge } from '@/utils/format';
+import { PATIENT_CLASSES, DOCTOR_SPECIALIZATIONS } from '@/utils/constants';
 import {
-  UserIcon,
-  CalendarIcon,
-  MapPinIcon,
+  UserCircleIcon,
   IdentificationIcon,
+  CalendarDaysIcon,
+  MapPinIcon,
   ShieldCheckIcon,
+  AcademicCapIcon,
+  ClockIcon,
   CurrencyDollarIcon,
+  EnvelopeIcon,
+  PhoneIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
-interface PatientProfile {
+interface UserProfile {
   id: string;
   name: string;
   username: string;
   email: string;
-  nik: string;
   gender: boolean;
-  birthPlace: string;
-  birthDate: string;
-  pClass: number;
-  insuranceLimit: number;
-  availableLimit: number;
+  role: string;
   createdAt: string;
+  patient?: {
+    nik: string;
+    birthPlace: string;
+    birthDate: string;
+    pClass: number;
+    insuranceLimit: number;
+    availableLimit: number;
+  };
+  doctor?: {
+    specialization: number;
+    yearsOfExperience: number;
+    fee: number;
+    schedules: number[];
+  };
 }
 
 export default function ProfilePage() {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<PatientProfile | null>(null);
+  // const { user } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        if (user?.role !== 'patient') {
-          toast.error('Only patients can view profile');
-          return;
-        }
+    fetchProfile();
+  }, []);
 
-        setLoading(true);
-        const data = await apiClient.getProfile();
-        setProfile(data);
-      } catch (error) {
-        console.error('Failed to fetch profile:', error);
-        toast.error('Failed to load profile');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user) {
-      fetchProfile();
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const data = await apiClient.getUserProfile();
+      setProfile(data);
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+      toast.error('Failed to load profile');
+    } finally {
+      setLoading(false);
     }
-  }, [user]);
+  };
 
-  if (user?.role !== 'patient') {
-    return (
-      <div className="card text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-        <p className="text-gray-600">Only patients can view their profile.</p>
-      </div>
-    );
-  }
+  const getDayName = (dayNumber: number): string => {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    return days[dayNumber] || '';
+  };
 
   if (loading) {
     return (
@@ -85,168 +87,210 @@ export default function ProfilePage() {
     );
   }
 
-  const patientClass = PATIENT_CLASSES[profile.pClass as keyof typeof PATIENT_CLASSES];
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="card">
         <div className="flex items-center space-x-6">
           <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-2xl">
+            <span className="text-white text-2xl font-bold">
               {profile.name.charAt(0).toUpperCase()}
             </span>
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{profile.name}</h1>
-            <p className="text-lg text-gray-600">Patient Profile</p>
+            <p className="text-lg text-gray-600 capitalize">{profile.role}</p>
             <p className="text-sm text-gray-500">Member since {formatDate(profile.createdAt)}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Personal Information */}
+      {/* Basic Information */}
+      <div className="card">
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">Basic Information</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex items-center space-x-3">
+            <UserCircleIcon className="w-5 h-5 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Full Name</p>
+              <p className="text-gray-900">{profile.name}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <IdentificationIcon className="w-5 h-5 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Username</p>
+              <p className="text-gray-900">{profile.username}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <EnvelopeIcon className="w-5 h-5 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Email</p>
+              <p className="text-gray-900">{profile.email}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <UserCircleIcon className="w-5 h-5 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Gender</p>
+              <p className="text-gray-900">{profile.gender ? 'Female' : 'Male'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Patient-specific information */}
+      {profile.patient && (
         <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-            <UserIcon className="w-5 h-5 mr-2" />
-            Personal Information
-          </h2>
-          
-          <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Patient Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex items-center space-x-3">
               <IdentificationIcon className="w-5 h-5 text-gray-400" />
               <div>
-                <label className="text-sm font-medium text-gray-600">NIK</label>
-                <p className="text-gray-900">{profile.nik}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <UserIcon className="w-5 h-5 text-gray-400" />
-              <div>
-                <label className="text-sm font-medium text-gray-600">Username</label>
-                <p className="text-gray-900">{profile.username}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <UserIcon className="w-5 h-5 text-gray-400" />
-              <div>
-                <label className="text-sm font-medium text-gray-600">Email</label>
-                <p className="text-gray-900">{profile.email}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <UserIcon className="w-5 h-5 text-gray-400" />
-              <div>
-                <label className="text-sm font-medium text-gray-600">Gender</label>
-                <p className="text-gray-900">{profile.gender ? 'Female' : 'Male'}</p>
+                <p className="text-sm font-medium text-gray-500">NIK</p>
+                <p className="text-gray-900 font-mono">{profile.patient.nik}</p>
               </div>
             </div>
 
             <div className="flex items-center space-x-3">
               <MapPinIcon className="w-5 h-5 text-gray-400" />
               <div>
-                <label className="text-sm font-medium text-gray-600">Birth Place</label>
-                <p className="text-gray-900">{profile.birthPlace}</p>
+                <p className="text-sm font-medium text-gray-500">Place of Birth</p>
+                <p className="text-gray-900">{profile.patient.birthPlace}</p>
               </div>
             </div>
 
             <div className="flex items-center space-x-3">
-              <CalendarIcon className="w-5 h-5 text-gray-400" />
+              <CalendarDaysIcon className="w-5 h-5 text-gray-400" />
               <div>
-                <label className="text-sm font-medium text-gray-600">Birth Date</label>
-                <p className="text-gray-900">{formatDate(profile.birthDate)}</p>
+                <p className="text-sm font-medium text-gray-500">Date of Birth</p>
+                <p className="text-gray-900">
+                  {formatDate(profile.patient.birthDate)} 
+                  <span className="text-gray-500 ml-2">
+                    (Age: {calculateAge(profile.patient.birthDate)} years)
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <ShieldCheckIcon className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Patient Class</p>
+                <p className="text-gray-900">
+                  {PATIENT_CLASSES[profile.patient.pClass as keyof typeof PATIENT_CLASSES]?.label || `Class ${profile.patient.pClass}`}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {PATIENT_CLASSES[profile.patient.pClass as keyof typeof PATIENT_CLASSES]?.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <CurrencyDollarIcon className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Insurance Limit</p>
+                <p className="text-gray-900">{formatCurrency(profile.patient.insuranceLimit)}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <CurrencyDollarIcon className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Available Limit</p>
+                <p className="text-gray-900">{formatCurrency(profile.patient.availableLimit)}</p>
               </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Insurance Information */}
+      {/* Doctor-specific information */}
+      {profile.doctor && (
         <div className="card">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-            <ShieldCheckIcon className="w-5 h-5 mr-2" />
-            Insurance Information
-          </h2>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Doctor Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex items-center space-x-3">
+              <AcademicCapIcon className="w-5 h-5 text-gray-400" />
               <div>
-                <label className="text-sm font-medium text-blue-600">Patient Class</label>
-                <p className="text-lg font-semibold text-blue-900">
-                  {patientClass?.name}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold">{profile.pClass}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <CurrencyDollarIcon className="w-5 h-5 text-gray-400" />
-              <div className="flex-1">
-                <label className="text-sm font-medium text-gray-600">Insurance Limit</label>
-                <p className="text-lg font-semibold text-gray-900">
-                  {formatCurrency(profile.insuranceLimit)}
+                <p className="text-sm font-medium text-gray-500">Specialization</p>
+                <p className="text-gray-900">
+                  {DOCTOR_SPECIALIZATIONS[profile.doctor.specialization as keyof typeof DOCTOR_SPECIALIZATIONS]}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center space-x-3">
-              <CurrencyDollarIcon className="w-5 h-5 text-gray-400" />
-              <div className="flex-1">
-                <label className="text-sm font-medium text-gray-600">Available Limit</label>
-                <p className="text-lg font-semibold text-green-600">
-                  {formatCurrency(profile.availableLimit)}
-                </p>
+              <ClockIcon className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Years of Experience</p>
+                <p className="text-gray-900">{profile.doctor.yearsOfExperience} years</p>
               </div>
             </div>
 
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-2">Limit Usage</h4>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full"
-                  style={{
-                    width: `${((profile.insuranceLimit - profile.availableLimit) / profile.insuranceLimit) * 100}%`,
-                  }}
-                ></div>
+            <div className="flex items-center space-x-3">
+              <CurrencyDollarIcon className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Consultation Fee</p>
+                <p className="text-gray-900">{formatCurrency(profile.doctor.fee)}</p>
               </div>
-              <div className="flex justify-between text-sm text-gray-600 mt-1">
-                <span>Used: {formatCurrency(profile.insuranceLimit - profile.availableLimit)}</span>
-                <span>Available: {formatCurrency(profile.availableLimit)}</span>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <CalendarDaysIcon className="w-5 h-5 text-gray-400 mt-1" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Practice Schedule</p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {profile.doctor.schedules.map((dayNum) => (
+                    <span
+                      key={dayNum}
+                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md"
+                    >
+                      {getDayName(dayNum)}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Actions */}
-      <div className="card">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <a
-            href="/dashboard/appointments"
-            className="btn-outline text-center"
-          >
-            View My Appointments
-          </a>
-          <a
-            href="/dashboard/policies"
-            className="btn-outline text-center"
-          >
-            View My Policies
-          </a>
-          <a
-            href="/dashboard/bills"
-            className="btn-outline text-center"
-          >
-            View My Bills
-          </a>
+      {/* Account Settings */}
+      {profile.role === 'patient' && (
+        <div className="card">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button 
+              className="btn-outline flex items-center justify-center space-x-2"
+              onClick={() => window.location.href = '/dashboard/appointments'}
+            >
+              <CalendarDaysIcon className="w-5 h-5" />
+              <span>My Appointments</span>
+            </button>
+            
+            <button 
+              className="btn-outline flex items-center justify-center space-x-2"
+              onClick={() => window.location.href = '/dashboard/bills'}
+            >
+              <CurrencyDollarIcon className="w-5 h-5" />
+              <span>My Bills</span>
+            </button>
+            
+            <button 
+              className="btn-outline flex items-center justify-center space-x-2"
+              onClick={() => window.location.href = '/dashboard/policies'}
+            >
+              <ShieldCheckIcon className="w-5 h-5" />
+              <span>My Policies</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
