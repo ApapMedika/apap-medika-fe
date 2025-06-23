@@ -1,7 +1,8 @@
 'use client';
 
-import { Toaster } from 'react-hot-toast';
+import React from 'react';
 import { AuthProvider } from '@/contexts/auth-context';
+import { Toaster } from 'react-hot-toast';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -12,7 +13,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#363636',
+            background: '#333',
             color: '#fff',
           },
           success: {

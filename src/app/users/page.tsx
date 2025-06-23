@@ -1,65 +1,53 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  Eye, 
-  UserPlus,
-  Shield,
-  Stethoscope,
-  User,
-  Pill
-} from 'lucide-react';
-import Link from 'next/link';
+import { formatDate } from '@/utils/format';
+import {
+  UserGroupIcon,
+  MagnifyingGlassIcon,
+  ArrowPathIcon,
+} from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
-interface EndUser {
+interface User {
   id: string;
   name: string;
   username: string;
   email: string;
   role: string;
   gender: boolean;
-  created_at: string;
-  is_active: boolean;
+  createdAt: string;
+  // Patient specific
+  nik?: string;
+  pClass?: number;
+  // Doctor specific
+  specialization?: number;
 }
-
-const roleIcons = {
-  admin: Shield,
-  doctor: Stethoscope,
-  nurse: User,
-  pharmacist: Pill,
-  patient: User,
-};
-
-const roleColors = {
-  admin: 'bg-red-100 text-red-800',
-  doctor: 'bg-blue-100 text-blue-800',
-  nurse: 'bg-green-100 text-green-800',
-  pharmacist: 'bg-purple-100 text-purple-800',
-  patient: 'bg-gray-100 text-gray-800',
-};
 
 export default function UsersPage() {
   const { user } = useAuth();
-  const [users, setUsers] = useState<EndUser[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<User | null>(null);
+
+  // Redirect if not admin
+  if (user?.role !== 'admin') {
+    return (
+      <div className="card text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+        <p className="text-gray-600">Only administrators can manage users.</p>
+      </div>
+    );
+  }
 
   useEffect(() => {
-    if (user?.role === 'admin') {
-      fetchUsers();
-    }
-  }, [user, roleFilter]);
+    fetchUsers();
+  }, [roleFilter]);
 
   const fetchUsers = async () => {
     try {
@@ -67,195 +55,213 @@ export default function UsersPage() {
       const params: any = {};
       if (roleFilter) params.role = roleFilter;
       
-      const response = await apiClient.getUsers(params);
-      setUsers(response.results || response);
+      const data = await apiClient.getUsers(params);
+      setUsers(Array.isArray(data) ? data : data.results || []);
     } catch (error) {
-      toast.error('Failed to fetch users');
-      console.error('Error fetching users:', error);
+      console.error('Failed to fetch users:', error);
+      toast.error('Failed to load users');
     } finally {
       setLoading(false);
     }
   };
 
-  if (user?.role !== 'admin') {
-    return (
-      <div className="text-center py-8">
-        <Shield className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-gray-500">Access denied. Admin privileges required.</p>
-      </div>
-    );
-  }
+  const handleUpgradeClass = async (newClass: number) => {
+    if (!selectedPatient) return;
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    try {
+      await apiClient.upgradePatientClass(selectedPatient.id, newClass);
+      toast.success(`Patient class upgraded to Class ${newClass}`);
+      setUpgradeModalOpen(false);
+      setSelectedPatient(null);
+      fetchUsers();
+    } catch (error) {
+      toast.error('Failed to upgrade patient class');
+    }
+  };
+
+  const filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600">Manage all users in the system</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <UserGroupIcon className="w-8 h-8 text-blue-600" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+            <p className="text-gray-600">Manage system users and patient classes</p>
+          </div>
         </div>
-        
-        <Link href="/signup">
-          <Button className="flex items-center gap-2">
-            <UserPlus className="h-4 w-4" />
-            Add New User
-          </Button>
-        </Link>
+        <button
+          onClick={fetchUsers}
+          className="btn-outline btn-sm"
+          disabled={loading}
+        >
+          <ArrowPathIcon className="w-4 h-4 mr-2" />
+          Refresh
+        </button>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Search */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search by name, email, or username..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Role Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Role</label>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="doctor">Doctor</SelectItem>
-                  <SelectItem value="nurse">Nurse</SelectItem>
-                  <SelectItem value="pharmacist">Pharmacist</SelectItem>
-                  <SelectItem value="patient">Patient</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <div className="card">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
+            <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search users..."
+              className="form-input pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Users Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {Object.entries(
-          users.reduce((acc, user) => {
-            acc[user.role] = (acc[user.role] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>)
-        ).map(([role, count]) => {
-          const Icon = roleIcons[role as keyof typeof roleIcons] || User;
-          return (
-            <Card key={role}>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 capitalize">{role}s</p>
-                    <p className="text-2xl font-bold">{count}</p>
-                  </div>
-                  <Icon className="h-8 w-8 text-blue-600" />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+          <select
+            className="form-select"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+          >
+            <option value="">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="doctor">Doctor</option>
+            <option value="nurse">Nurse</option>
+            <option value="pharmacist">Pharmacist</option>
+            <option value="patient">Patient</option>
+          </select>
+        </div>
       </div>
 
       {/* Users Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Users ({filteredUsers.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500">No users found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium text-gray-900">Name</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Email</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Role</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Gender</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Status</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Joined</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => {
-                    const Icon = roleIcons[user.role as keyof typeof roleIcons] || User;
-                    return (
-                      <tr key={user.id} className="border-b hover:bg-gray-50">
-                        <td className="p-3">
-                          <div>
-                            <p className="font-medium">{user.name}</p>
-                            <p className="text-sm text-gray-500">@{user.username}</p>
-                          </div>
-                        </td>
-                        <td className="p-3">{user.email}</td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4" />
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              roleColors[user.role as keyof typeof roleColors]
-                            }`}>
-                              {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-3">{user.gender ? 'Female' : 'Male'}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            user.is_active 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {user.is_active ? 'Active' : 'Inactive'}
+      <div className="card">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="spinner w-8 h-8"></div>
+          </div>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead className="table-header">
+                <tr>
+                  <th className="table-header-cell">User</th>
+                  <th className="table-header-cell">Role</th>
+                  <th className="table-header-cell">Gender</th>
+                  <th className="table-header-cell">Created</th>
+                  <th className="table-header-cell">Class</th>
+                  <th className="table-header-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="table-body">
+                {filteredUsers.map((u) => (
+                  <tr key={u.id}>
+                    <td className="table-cell">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-medium text-sm">
+                            {u.name.charAt(0).toUpperCase()}
                           </span>
-                        </td>
-                        <td className="p-3 text-sm text-gray-500">
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="p-3">
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{u.name}</p>
+                          <p className="text-sm text-gray-500">{u.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      <span className={`badge ${
+                        u.role === 'admin' ? 'badge-primary' :
+                        u.role === 'doctor' ? 'badge-success' :
+                        u.role === 'nurse' ? 'badge-warning' :
+                        u.role === 'pharmacist' ? 'badge-danger' :
+                        'badge-gray'
+                      }`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="table-cell">
+                      {u.gender ? 'Female' : 'Male'}
+                    </td>
+                    <td className="table-cell">
+                      {formatDate(u.createdAt)}
+                    </td>
+                    <td className="table-cell">
+                      {u.role === 'patient' && u.pClass ? (
+                        <span className="badge badge-primary">
+                          Class {u.pClass}
+                        </span>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    <td className="table-cell">
+                      {u.role === 'patient' && u.pClass && u.pClass < 3 && (
+                        <button
+                          onClick={() => {
+                            setSelectedPatient(u);
+                            setUpgradeModalOpen(true);
+                          }}
+                          className="btn-primary btn-sm"
+                        >
+                          Upgrade Class
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Upgrade Modal */}
+      {upgradeModalOpen && selectedPatient && (
+        <div className="modal-container">
+          <div className="modal-backdrop" onClick={() => setUpgradeModalOpen(false)}></div>
+          <div className="flex items-center justify-center min-h-full p-4">
+            <div className="modal-content">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Upgrade Patient Class
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Upgrade {selectedPatient.name} from Class {selectedPatient.pClass} to:
+                </p>
+                
+                <div className="space-y-3">
+                  {selectedPatient.pClass === 3 && (
+                    <button
+                      onClick={() => handleUpgradeClass(2)}
+                      className="w-full btn-primary"
+                    >
+                      Upgrade to Class 2 (Rp 50,000,000 limit)
+                    </button>
+                  )}
+                  {selectedPatient.pClass && selectedPatient.pClass >= 2 && (
+                    <button
+                      onClick={() => handleUpgradeClass(1)}
+                      className="w-full btn-primary"
+                    >
+                      Upgrade to Class 1 (Rp 100,000,000 limit)
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => setUpgradeModalOpen(false)}
+                    className="btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

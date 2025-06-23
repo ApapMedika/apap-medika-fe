@@ -52,33 +52,33 @@ class ApiClient {
 
   // Auth endpoints
   async login(email: string, password: string) {
-    const response = await this.client.post('/profiles/login/', { email, password });
+    const response = await this.client.post('/profile/login/', { email, password });
     return response.data;
   }
 
   async signup(data: any) {
-    const response = await this.client.post('/profiles/signup/', data);
+    const response = await this.client.post('/profile/signup/', data);
     return response.data;
   }
 
   async logout() {
-    const response = await this.client.post('/profiles/logout/');
+    const response = await this.client.post('/profile/logout/');
     return response.data;
   }
 
   async getProfile() {
-    const response = await this.client.get('/profiles/users/me/');
+    const response = await this.client.get('/profile/users/me/');
     return response.data;
   }
 
   // User management
   async getUsers(params?: any) {
-    const response = await this.client.get('/profiles/users/', { params });
+    const response = await this.client.get('/profile/users/', { params });
     return response.data;
   }
 
   async upgradePatientClass(patientId: string, newClass: number) {
-    const response = await this.client.put('/profiles/patients/upgrade-class/', {
+    const response = await this.client.put('/profile/patients/upgrade-class/', {
       patient_id: patientId,
       new_class: newClass,
     });
@@ -87,33 +87,33 @@ class ApiClient {
 
   // Patient endpoints
   async getPatients(params?: any) {
-    const response = await this.client.get('/profiles/patients/', { params });
+    const response = await this.client.get('/profile/patients/', { params });
     return response.data;
   }
 
   async getPatientByNik(nik: string) {
-    const response = await this.client.get(`/profiles/patients/${nik}/`);
+    const response = await this.client.get(`/profile/patients/${nik}/`);
     return response.data;
   }
 
   async searchPatient(nik: string) {
-    const response = await this.client.post('/profiles/patients/search/', { nik });
+    const response = await this.client.post('/profile/patients/search/', { nik });
     return response.data;
   }
 
   // Doctor endpoints
   async getDoctors(params?: any) {
-    const response = await this.client.get('/profiles/doctors/', { params });
+    const response = await this.client.get('/profile/doctors/', { params });
     return response.data;
   }
 
   async getDoctorById(id: string) {
-    const response = await this.client.get(`/profiles/doctors/${id}/`);
+    const response = await this.client.get(`/profile/doctors/${id}/`);
     return response.data;
   }
 
   async getDoctorSchedule(doctorId: string) {
-    const response = await this.client.get(`/profiles/doctors/${doctorId}/schedule/`);
+    const response = await this.client.get(`/profile/doctors/${doctorId}/schedule/`);
     return response.data;
   }
 

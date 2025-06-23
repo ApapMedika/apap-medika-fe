@@ -1,296 +1,233 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  CreditCard, 
-  Eye, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle,
-  Calendar,
-  FileText
-} from 'lucide-react';
-import Link from 'next/link';
+import { formatCurrency, formatDate } from '@/utils/format';
+import {
+  CurrencyDollarIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon,
+} from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface Bill {
   id: string;
+  patient: {
+    id: string;
+    name: string;
+    nik: string;
+  };
   appointment?: {
     id: string;
-    doctor: { user: { name: string } };
-    total_fee: number;
+    totalFee: number;
   };
   prescription?: {
     id: string;
-    total_price: number;
+    totalPrice: number;
   };
   reservation?: {
     id: string;
-    total_fee: number;
+    totalFee: number;
   };
+  subtotal: number;
   policy?: {
     id: string;
-    company: { name: string };
+    company: {
+      name: string;
+    };
   };
-  status: string;
-  subtotal: number;
-  total_amount_due: number;
-  created_at: string;
-  treatments_covered?: {
-    treatment: string;
-    amount: number;
-  }[];
+  coveragesUsed?: Array<{
+    id: number;
+    name: string;
+    coverageAmount: number;
+  }>;
+  totalAmountDue: number;
+  status: 'TREATMENT_IN_PROGRESS' | 'UNPAID' | 'PAID';
+  createdAt: string;
 }
-
-const statusMap = {
-  'treatment_in_progress': { label: 'Treatment In Progress', color: 'bg-blue-100 text-blue-800', icon: Clock },
-  'unpaid': { label: 'Unpaid', color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
-  'paid': { label: 'Paid', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-};
 
 export default function BillsPage() {
   const { user } = useAuth();
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  // Redirect if not patient
+  if (user?.role !== 'patient') {
+    return (
+      <div className="card text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+        <p className="text-gray-600">Only patients can view bills.</p>
+      </div>
+    );
+  }
 
   useEffect(() => {
-    if (user?.role === 'patient') {
-      fetchBills();
-    }
-  }, [user]);
+    fetchBills();
+  }, [statusFilter]);
 
   const fetchBills = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.getBills();
-      setBills(response.results || response);
+      const params: any = {
+        patient: user?.id,
+      };
+      
+      if (statusFilter) params.status = statusFilter;
+      
+      const data = await apiClient.getBills(params);
+      setBills(Array.isArray(data) ? data : data.results || []);
     } catch (error) {
-      toast.error('Failed to fetch bills');
-      console.error('Error fetching bills:', error);
+      console.error('Failed to fetch bills:', error);
+      toast.error('Failed to load bills');
     } finally {
       setLoading(false);
     }
   };
 
-  if (user?.role !== 'patient') {
-    return (
-      <div className="text-center py-8">
-        <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-gray-500">Access denied. Patient access required.</p>
-      </div>
-    );
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-    }).format(amount);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'TREATMENT_IN_PROGRESS':
+        return <span className="badge badge-warning">Treatment in Progress</span>;
+      case 'UNPAID':
+        return <span className="badge badge-danger">Unpaid</span>;
+      case 'PAID':
+        return <span className="badge badge-success">Paid</span>;
+      default:
+        return <span className="badge badge-gray">Unknown</span>;
+    }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const unpaidBills = bills.filter(bill => bill.status === 'unpaid');
-  const paidBills = bills.filter(bill => bill.status === 'paid');
+  const filteredBills = bills.filter(bill =>
+    bill.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (bill.appointment?.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (bill.prescription?.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (bill.reservation?.id.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">My Bills</h1>
-        <p className="text-gray-600">View and manage your medical bills</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <CurrencyDollarIcon className="w-8 h-8 text-blue-600" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">My Bills</h1>
+            <p className="text-gray-600">View and manage your medical bills</p>
+          </div>
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Bills</p>
-                <p className="text-2xl font-bold">{bills.length}</p>
-              </div>
-              <FileText className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Unpaid Bills</p>
-                <p className="text-2xl font-bold text-red-600">{unpaidBills.length}</p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Outstanding</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {formatCurrency(unpaidBills.reduce((sum, bill) => sum + bill.total_amount_due, 0))}
-                </p>
-              </div>
-              <CreditCard className="h-8 w-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Filters */}
+      <div className="card">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
+            <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search bills..."
+              className="form-input pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <select
+            className="form-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All Status</option>
+            <option value="UNPAID">Unpaid</option>
+            <option value="PAID">Paid</option>
+          </select>
+        </div>
       </div>
 
-      {/* Unpaid Bills */}
-      {unpaidBills.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-red-600">Unpaid Bills ({unpaidBills.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium text-gray-900">Bill ID</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Date</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Services</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Amount Due</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {unpaidBills.map((bill) => (
-                    <tr key={bill.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 font-mono text-sm">{bill.id}</td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span>{formatDate(bill.created_at)}</span>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="space-y-1">
-                          {bill.appointment && (
-                            <div className="text-sm">
-                              <span className="font-medium">Appointment:</span> Dr. {bill.appointment.doctor.user.name}
-                            </div>
-                          )}
-                          {bill.prescription && (
-                            <div className="text-sm">
-                              <span className="font-medium">Prescription</span>
-                            </div>
-                          )}
-                          {bill.reservation && (
-                            <div className="text-sm">
-                              <span className="font-medium">Room Reservation</span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div>
-                          <p className="font-bold text-lg text-red-600">
-                            {formatCurrency(bill.total_amount_due)}
+      {/* Bills Table */}
+      <div className="card">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="spinner w-8 h-8"></div>
+          </div>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead className="table-header">
+                <tr>
+                  <th className="table-header-cell">Bill ID</th>
+                  <th className="table-header-cell">Date</th>
+                  <th className="table-header-cell">Services</th>
+                  <th className="table-header-cell">Amount Due</th>
+                  <th className="table-header-cell">Status</th>
+                  <th className="table-header-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="table-body">
+                {filteredBills.map((bill) => (
+                  <tr key={bill.id}>
+                    <td className="table-cell font-mono text-sm">
+                      {bill.id}
+                    </td>
+                    <td className="table-cell">
+                      {formatDate(bill.createdAt)}
+                    </td>
+                    <td className="table-cell">
+                      <div className="text-sm">
+                        {bill.appointment && (
+                          <div>Appointment: {bill.appointment.id}</div>
+                        )}
+                        {bill.prescription && (
+                          <div>Prescription: {bill.prescription.id}</div>
+                        )}
+                        {bill.reservation && (
+                          <div>Reservation: {bill.reservation.id}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {formatCurrency(bill.totalAmountDue)}
+                        </p>
+                        {bill.subtotal !== bill.totalAmountDue && (
+                          <p className="text-sm text-gray-500 line-through">
+                            {formatCurrency(bill.subtotal)}
                           </p>
-                          {bill.subtotal !== bill.total_amount_due && (
-                            <p className="text-sm text-gray-500 line-through">
-                              {formatCurrency(bill.subtotal)}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <Link href={`/dashboard/bills/${bill.id}`}>
-                          <Button size="sm">
-                            <Eye className="h-4 w-4 mr-2" />
-                            View & Pay
-                          </Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* All Bills */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Bills ({bills.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : bills.length === 0 ? (
-            <div className="text-center py-8">
-              <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500">No bills found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium text-gray-900">Bill ID</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Date</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Status</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Amount</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Actions</th>
+                        )}
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      {getStatusBadge(bill.status)}
+                    </td>
+                    <td className="table-cell">
+                      <Link
+                        href={`/dashboard/bills/${bill.id}`}
+                        className="btn-primary btn-sm"
+                      >
+                        Details
+                      </Link>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {bills.map((bill) => {
-                    const status = statusMap[bill.status as keyof typeof statusMap];
-                    const StatusIcon = status?.icon || Clock;
-                    
-                    return (
-                      <tr key={bill.id} className="border-b hover:bg-gray-50">
-                        <td className="p-3 font-mono text-sm">{bill.id}</td>
-                        <td className="p-3">{formatDate(bill.created_at)}</td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <StatusIcon className="h-4 w-4" />
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${status?.color || 'bg-gray-100 text-gray-800'}`}>
-                              {status?.label || bill.status}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-3 font-medium">
-                          {formatCurrency(bill.total_amount_due)}
-                        </td>
-                        <td className="p-3">
-                          <Link href={`/dashboard/bills/${bill.id}`}>
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+                {filteredBills.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="table-cell text-center py-12">
+                      <div className="text-gray-500">
+                        <CurrencyDollarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No bills found</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

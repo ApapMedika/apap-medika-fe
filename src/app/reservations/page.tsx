@@ -4,116 +4,128 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api';
-import { formatCurrency, formatDate } from '@/utils/format';
-import { PRESCRIPTION_STATUS } from '@/utils/constants';
+import { formatDate } from '@/utils/format';
 import {
-  BeakerIcon,
+  BuildingOfficeIcon,
+  PlusIcon,
   MagnifyingGlassIcon,
+  FunnelIcon,
   ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
-interface Prescription {
+interface Reservation {
   id: string;
   patient: {
     id: string;
     name: string;
     nik: string;
   };
-  appointment?: {
+  room: {
     id: string;
+    name: string;
   };
-  status: number;
-  totalPrice: number;
-  processedBy?: string;
+  nurse: {
+    id: string;
+    name: string;
+  };
+  dateIn: string;
+  dateOut: string;
+  status: 'ongoing' | 'upcoming' | 'done';
+  totalFee: number;
   createdAt: string;
-  createdBy: string;
 }
 
-export default function PrescriptionsPage() {
+export default function ReservationsPage() {
   const { user } = useAuth();
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
-    fetchPrescriptions();
+    fetchReservations();
   }, [statusFilter]);
 
-  const fetchPrescriptions = async () => {
+  const fetchReservations = async () => {
     try {
       setLoading(true);
       const params: any = {};
+      
+      // Role-based filtering
+      if (user?.role === 'nurse') {
+        params.nurse = user.id;
+      } else if (user?.role === 'patient') {
+        params.patient = user.id;
+      }
+      
       if (statusFilter) params.status = statusFilter;
       
-      const data = await apiClient.getPrescriptions(params);
-      setPrescriptions(Array.isArray(data) ? data : data.results || []);
+      const data = await apiClient.getReservations(params);
+      setReservations(Array.isArray(data) ? data : data.results || []);
     } catch (error) {
-      console.error('Failed to fetch prescriptions:', error);
-      toast.error('Failed to load prescriptions');
+      console.error('Failed to fetch reservations:', error);
+      toast.error('Failed to load reservations');
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusBadge = (status: number) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case PRESCRIPTION_STATUS.CREATED:
-        return <span className="badge badge-warning">Created</span>;
-      case PRESCRIPTION_STATUS.WAITING_FOR_STOCK:
-        return <span className="badge badge-warning">Waiting for Stock</span>;
-      case PRESCRIPTION_STATUS.DONE:
+      case 'upcoming':
+        return <span className="badge badge-warning">Upcoming</span>;
+      case 'ongoing':
+        return <span className="badge badge-primary">Ongoing</span>;
+      case 'done':
         return <span className="badge badge-success">Done</span>;
-      case PRESCRIPTION_STATUS.CANCELLED:
-        return <span className="badge badge-danger">Cancelled</span>;
       default:
         return <span className="badge badge-gray">Unknown</span>;
     }
   };
 
-  const filteredPrescriptions = prescriptions.filter(prescription =>
-    prescription.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    prescription.patient.nik.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    prescription.id.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredReservations = reservations.filter(reservation =>
+    reservation.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    reservation.room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    reservation.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Check access permissions
-  const canViewPrescriptions = user?.role === 'pharmacist' || user?.role === 'patient';
-  const canViewStatistics = user?.role === 'pharmacist';
-
-  if (!canViewPrescriptions) {
-    return (
-      <div className="card text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-        <p className="text-gray-600">Only pharmacists and patients can view prescriptions.</p>
-      </div>
-    );
-  }
+  const canCreateReservation = user?.role === 'nurse';
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <BeakerIcon className="w-8 h-8 text-blue-600" />
+          <BuildingOfficeIcon className="w-8 h-8 text-blue-600" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {user?.role === 'patient' ? 'My Prescriptions' : 'Prescription Management'}
+              {user?.role === 'patient' ? 'My Reservations' : 
+               user?.role === 'nurse' ? 'My Managed Reservations' : 
+               'All Reservations'}
             </h1>
             <p className="text-gray-600">
-              {user?.role === 'patient' ? 'View your prescriptions' : 'Manage patient prescriptions'}
+              {user?.role === 'patient' ? 'View your room reservations' :
+               user?.role === 'nurse' ? 'Manage patient reservations' :
+               'Hospital room reservations'}
             </p>
           </div>
         </div>
         <div className="flex space-x-3">
-          {canViewStatistics && (
+          <Link
+            href="/dashboard/reservations/chart"
+            className="btn-outline btn-sm"
+          >
+            <ChartBarIcon className="w-4 h-4 mr-2" />
+            Chart
+          </Link>
+          {canCreateReservation && (
             <Link
-              href="/dashboard/prescriptions/statistics"
-              className="btn-outline btn-sm"
+              href="/dashboard/reservations/create"
+              className="btn-primary btn-sm"
             >
-              <ChartBarIcon className="w-4 h-4 mr-2" />
-              View Statistics
+              <PlusIcon className="w-4 h-4 mr-2" />
+              Create Reservation
             </Link>
           )}
         </div>
@@ -126,7 +138,7 @@ export default function PrescriptionsPage() {
             <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search prescriptions..."
+              placeholder="Search reservations..."
               className="form-input pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -139,15 +151,14 @@ export default function PrescriptionsPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">All Status</option>
-            <option value="0">Created</option>
-            <option value="1">Waiting for Stock</option>
-            <option value="2">Done</option>
-            <option value="3">Cancelled</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="done">Done</option>
           </select>
         </div>
       </div>
 
-      {/* Prescriptions Table */}
+      {/* Reservations Table */}
       <div className="card">
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -159,41 +170,49 @@ export default function PrescriptionsPage() {
               <thead className="table-header">
                 <tr>
                   <th className="table-header-cell">ID</th>
-                  <th className="table-header-cell">Date Created</th>
-                  <th className="table-header-cell">Patient Name</th>
-                  <th className="table-header-cell">Total Price</th>
+                  <th className="table-header-cell">Nurse</th>
+                  <th className="table-header-cell">Patient</th>
+                  <th className="table-header-cell">Date In</th>
+                  <th className="table-header-cell">Date Out</th>
                   <th className="table-header-cell">Status</th>
-                  <th className="table-header-cell">Action</th>
+                  <th className="table-header-cell">Actions</th>
                 </tr>
               </thead>
               <tbody className="table-body">
-                {filteredPrescriptions.map((prescription) => (
-                  <tr key={prescription.id}>
+                {filteredReservations.map((reservation) => (
+                  <tr key={reservation.id}>
                     <td className="table-cell font-mono text-sm">
-                      {prescription.id}
-                    </td>
-                    <td className="table-cell">
-                      {formatDate(prescription.createdAt)}
+                      {reservation.id}
                     </td>
                     <td className="table-cell">
                       <div>
                         <p className="font-medium text-gray-900">
-                          {prescription.patient.name}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          NIK: {prescription.patient.nik}
+                          {reservation.nurse.name}
                         </p>
                       </div>
                     </td>
                     <td className="table-cell">
-                      {formatCurrency(prescription.totalPrice)}
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {reservation.patient.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          NIK: {reservation.patient.nik}
+                        </p>
+                      </div>
                     </td>
                     <td className="table-cell">
-                      {getStatusBadge(prescription.status)}
+                      {formatDate(reservation.dateIn)}
+                    </td>
+                    <td className="table-cell">
+                      {formatDate(reservation.dateOut)}
+                    </td>
+                    <td className="table-cell">
+                      {getStatusBadge(reservation.status)}
                     </td>
                     <td className="table-cell">
                       <Link
-                        href={`/dashboard/prescriptions/${prescription.id}`}
+                        href={`/dashboard/reservations/${reservation.id}`}
                         className="btn-primary btn-sm"
                       >
                         Details
@@ -201,12 +220,12 @@ export default function PrescriptionsPage() {
                     </td>
                   </tr>
                 ))}
-                {filteredPrescriptions.length === 0 && (
+                {filteredReservations.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="table-cell text-center py-12">
+                    <td colSpan={7} className="table-cell text-center py-12">
                       <div className="text-gray-500">
-                        <BeakerIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>No prescriptions found</p>
+                        <BuildingOfficeIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No reservations found</p>
                       </div>
                     </td>
                   </tr>

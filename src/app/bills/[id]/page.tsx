@@ -1,71 +1,89 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  ArrowLeft, 
-  CreditCard, 
-  FileText, 
-  Shield, 
-  CheckCircle,
-  Calendar,
-  User,
-  Building2,
-  Pill
-} from 'lucide-react';
-import Link from 'next/link';
+import { formatCurrency, formatDate } from '@/utils/format';
+import {
+  CurrencyDollarIcon,
+  ArrowLeftIcon,
+  CalendarDaysIcon,
+  BeakerIcon,
+  BuildingOfficeIcon,
+  ShieldCheckIcon,
+  CheckIcon,
+  InformationCircleIcon,
+} from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface BillDetail {
   id: string;
+  patient: {
+    id: string;
+    name: string;
+    nik: string;
+  };
   appointment?: {
     id: string;
-    doctor: { user: { name: string } };
-    total_fee: number;
-    treatments: { name: string; price: number }[];
+    totalFee: number;
   };
   prescription?: {
     id: string;
-    total_price: number;
+    totalPrice: number;
   };
   reservation?: {
     id: string;
-    total_fee: number;
+    totalFee: number;
   };
+  subtotal: number;
   policy?: {
     id: string;
-    company: { name: string };
+    company: {
+      name: string;
+    };
   };
-  status: string;
-  subtotal: number;
-  total_amount_due: number;
-  created_at: string;
-  treatments_covered?: {
-    treatment: string;
-    amount: number;
-  }[];
-  available_policies?: {
+  coveragesUsed?: Array<{
+    id: number;
+    name: string;
+    coverageAmount: number;
+  }>;
+  totalAmountDue: number;
+  status: 'TREATMENT_IN_PROGRESS' | 'UNPAID' | 'PAID';
+  createdAt: string;
+  updatedAt: string;
+  availablePolicies?: Array<{
     id: string;
-    company: { name: string };
-    coverages: { name: string; amount: number }[];
-  }[];
+    company: {
+      name: string;
+    };
+    totalCoverage: number;
+  }>;
 }
 
 export default function BillDetailPage() {
-  const params = useParams();
   const router = useRouter();
+  const params = useParams();
   const { user } = useAuth();
   const [bill, setBill] = useState<BillDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedPolicy, setSelectedPolicy] = useState<string>('');
-  const [updating, setUpdating] = useState(false);
+  const [selectedPolicyId, setSelectedPolicyId] = useState('');
+  const [showPriceModal, setShowPriceModal] = useState(false);
   const [paying, setPaying] = useState(false);
+
+  // Redirect if not patient
+  if (user?.role !== 'patient') {
+    return (
+      <div className="card text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+        <p className="text-gray-600">Only patients can view bill details.</p>
+        <button onClick={() => router.back()} className="btn-primary mt-4">
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (params.id) {
@@ -75,375 +93,380 @@ export default function BillDetailPage() {
 
   const fetchBill = async () => {
     try {
-      const response = await apiClient.getBillById(params.id as string);
-      setBill(response);
+      setLoading(true);
+      const data = await apiClient.getBillById(params.id as string);
+      setBill(data);
+      
+      // If unpaid and has appointment, fetch available policies
+      if (data.status === 'UNPAID' && data.appointment) {
+        // This would be a special API call to get policies that can cover the treatments
+        // For now, we'll use the existing getPolicies call
+        try {
+          const policies = await apiClient.getPolicies({ patient: user?.id, status: 0 });
+          data.availablePolicies = Array.isArray(policies) ? policies : policies.results || [];
+        } catch (error) {
+          console.log('No available policies found');
+        }
+      }
+      
+      setBill(data);
     } catch (error) {
-      toast.error('Failed to fetch bill details');
+      console.error('Failed to fetch bill:', error);
+      toast.error('Failed to load bill details');
       router.push('/dashboard/bills');
     } finally {
       setLoading(false);
     }
   };
 
-  const updateBillWithPolicy = async () => {
-    if (!bill || !selectedPolicy) return;
+  const handlePolicySelect = async () => {
+    if (!selectedPolicyId || !bill) return;
 
-    setUpdating(true);
     try {
-      await apiClient.updateBill(bill.id, {
-        policy_id: selectedPolicy
+      const updatedBill = await apiClient.updateBill(bill.id, {
+        policy_id: selectedPolicyId,
       });
+      setBill(updatedBill);
       toast.success('Policy applied successfully');
-      fetchBill();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to apply policy');
-    } finally {
-      setUpdating(false);
     }
   };
 
-  const payBill = async () => {
+  const handlePayment = async () => {
     if (!bill) return;
 
-    setPaying(true);
     try {
+      setPaying(true);
       await apiClient.payBill(bill.id);
-      toast.success('Bill paid successfully');
-      fetchBill();
+      toast.success('Payment successful');
+      fetchBill(); // Refresh bill data
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to process payment');
+      toast.error(error.response?.data?.message || 'Payment failed');
     } finally {
       setPaying(false);
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-    }).format(amount);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'TREATMENT_IN_PROGRESS':
+        return <span className="badge badge-warning">Treatment in Progress</span>;
+      case 'UNPAID':
+        return <span className="badge badge-danger">Unpaid</span>;
+      case 'PAID':
+        return <span className="badge badge-success">Paid</span>;
+      default:
+        return <span className="badge badge-gray">Unknown</span>;
+    }
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-96">
+        <div className="spinner w-8 h-8"></div>
       </div>
     );
   }
 
   if (!bill) {
     return (
-      <div className="text-center">
-        <p className="text-gray-500">Bill not found</p>
-        <Link href="/dashboard/bills">
-          <Button className="mt-4">Back to Bills</Button>
+      <div className="card text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Bill Not Found</h1>
+        <p className="text-gray-600 mb-4">The bill you're looking for doesn't exist.</p>
+        <Link href="/dashboard/bills" className="btn-primary">
+          Back to Bills
         </Link>
       </div>
     );
   }
 
-  const canSelectPolicy = bill.status === 'unpaid' && bill.appointment && !bill.policy;
-  const canPay = bill.status === 'unpaid';
-
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/bills">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Bill Details</h1>
-            <p className="text-gray-600">ID: {bill.id}</p>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => router.back()}
+            className="btn-outline btn-sm"
+          >
+            <ArrowLeftIcon className="w-4 h-4 mr-2" />
+            Back
+          </button>
+          <div className="flex items-center space-x-3">
+            <CurrencyDollarIcon className="w-8 h-8 text-blue-600" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Bill Details</h1>
+              <p className="text-gray-600">ID: {bill.id}</p>
+            </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            bill.status === 'paid' 
-              ? 'bg-green-100 text-green-800'
-              : bill.status === 'unpaid'
-              ? 'bg-yellow-100 text-yellow-800'
-              : 'bg-blue-100 text-blue-800'
-          }`}>
-            {bill.status.replace('_', ' ').toUpperCase()}
-          </span>
+        
+        <div className="flex space-x-3">
+          {bill.status === 'UNPAID' && (
+            <button
+              onClick={handlePayment}
+              disabled={paying}
+              className="btn-primary"
+            >
+              {paying ? (
+                <div className="flex items-center">
+                  <div className="w-4 h-4 border-b-2 border-white rounded-full animate-spin mr-2"></div>
+                  Processing...
+                </div>
+              ) : (
+                <>
+                  <CheckIcon className="w-4 h-4 mr-2" />
+                  Pay Bill
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Bill Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Bill Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Bill Information */}
+        <div className="card">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            Bill Information
+          </h2>
+          
+          <div className="space-y-4">
             <div>
-              <p className="text-sm text-gray-500">Bill Date</p>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <p className="font-medium">{new Date(bill.created_at).toLocaleDateString()}</p>
+              <label className="text-sm font-medium text-gray-600">Status</label>
+              <div className="mt-1">
+                {getStatusBadge(bill.status)}
               </div>
             </div>
+
             <div>
-              <p className="text-sm text-gray-500">Patient</p>
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-gray-400" />
-                <p className="font-medium">{user?.name}</p>
-              </div>
+              <label className="text-sm font-medium text-gray-600">Patient</label>
+              <p className="text-gray-900 mt-1">{bill.patient.name}</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-600">Bill Date</label>
+              <p className="text-gray-900 mt-1">{formatDate(bill.createdAt)}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Services Breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Services Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Appointment */}
-          {bill.appointment && (
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  <span className="font-medium">Appointment</span>
-                </div>
-                <span className="font-medium">{formatCurrency(bill.appointment.total_fee)}</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                ID: {bill.appointment.id} | Dr. {bill.appointment.doctor.user.name}
-              </p>
-              {bill.appointment.treatments && bill.appointment.treatments.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm font-medium text-gray-700">Treatments:</p>
-                  <ul className="text-sm text-gray-600">
-                    {bill.appointment.treatments.map((treatment, index) => (
-                      <li key={index} className="flex justify-between">
-                        <span>{treatment.name}</span>
-                        <span>{formatCurrency(treatment.price)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Prescription */}
-          {bill.prescription && (
-            <div className="p-4 bg-green-50 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Pill className="h-5 w-5 text-green-600" />
-                  <span className="font-medium">Prescription</span>
-                </div>
-                <span className="font-medium">{formatCurrency(bill.prescription.total_price)}</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                ID: {bill.prescription.id}
-              </p>
-            </div>
-          )}
-
-          {/* Reservation */}
-          {bill.reservation && (
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-purple-600" />
-                  <span className="font-medium">Room Reservation</span>
-                </div>
-                <span className="font-medium">{formatCurrency(bill.reservation.total_fee)}</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                ID: {bill.reservation.id}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Insurance Policy */}
-      {canSelectPolicy && bill.available_policies && bill.available_policies.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Apply Insurance Policy
-            </CardTitle>
-            <CardDescription>
-              Select a policy to reduce your bill amount
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Select Policy</label>
-              <Select value={selectedPolicy} onValueChange={setSelectedPolicy}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a policy" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bill.available_policies.map((policy) => (
-                    <SelectItem key={policy.id} value={policy.id}>
-                      {policy.id} - {policy.company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Payment Summary */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Payment Summary</h2>
+            <button
+              onClick={() => setShowPriceModal(true)}
+              className="btn-outline btn-sm"
+            >
+              <InformationCircleIcon className="w-4 h-4 mr-2" />
+              View Details
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex justify-between items-center py-2 border-b border-gray-200">
+              <span className="text-gray-600">Subtotal:</span>
+              <span className="font-medium text-gray-900">{formatCurrency(bill.subtotal)}</span>
             </div>
 
-            {selectedPolicy && (
+            {bill.coveragesUsed && bill.coveragesUsed.length > 0 && (
               <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Available Coverages:</p>
-                <div className="space-y-2">
-                  {bill.available_policies
-                    ?.find(p => p.id === selectedPolicy)
-                    ?.coverages.map((coverage, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <span className="text-sm">{coverage.name}</span>
-                        <span className="text-sm font-medium">{formatCurrency(coverage.amount)}</span>
-                      </div>
-                    ))}
-                </div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Insurance Coverage:</p>
+                {bill.coveragesUsed.map((coverage) => (
+                  <div key={coverage.id} className="flex justify-between items-center py-1 text-sm">
+                    <span className="text-green-600">- {coverage.name}</span>
+                    <span className="text-green-600">-{formatCurrency(coverage.coverageAmount)}</span>
+                  </div>
+                ))}
               </div>
             )}
 
-            <Button onClick={updateBillWithPolicy} disabled={!selectedPolicy || updating}>
-              {updating ? 'Applying...' : 'Apply Policy'}
-            </Button>
-          </CardContent>
-        </Card>
+            <div className="flex justify-between items-center py-3 border-t border-gray-200 text-lg font-semibold">
+              <span className="text-gray-900">Total Amount Due:</span>
+              <span className="text-blue-600">{formatCurrency(bill.totalAmountDue)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Services */}
+      <div className="card">
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">Services</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {bill.appointment && (
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center space-x-3 mb-3">
+                <CalendarDaysIcon className="w-6 h-6 text-blue-600" />
+                <h3 className="font-semibold text-gray-900">Appointment</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-2">ID: {bill.appointment.id}</p>
+              <p className="font-medium text-gray-900">{formatCurrency(bill.appointment.totalFee)}</p>
+              <Link
+                href={`/dashboard/appointments/${bill.appointment.id}`}
+                className="text-blue-600 hover:text-blue-500 text-sm"
+              >
+                View Details →
+              </Link>
+            </div>
+          )}
+
+          {bill.prescription && (
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center space-x-3 mb-3">
+                <BeakerIcon className="w-6 h-6 text-green-600" />
+                <h3 className="font-semibold text-gray-900">Prescription</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-2">ID: {bill.prescription.id}</p>
+              <p className="font-medium text-gray-900">{formatCurrency(bill.prescription.totalPrice)}</p>
+              <Link
+                href={`/dashboard/prescriptions/${bill.prescription.id}`}
+                className="text-blue-600 hover:text-blue-500 text-sm"
+              >
+                View Details →
+              </Link>
+            </div>
+          )}
+
+          {bill.reservation && (
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center space-x-3 mb-3">
+                <BuildingOfficeIcon className="w-6 h-6 text-purple-600" />
+                <h3 className="font-semibold text-gray-900">Reservation</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-2">ID: {bill.reservation.id}</p>
+              <p className="font-medium text-gray-900">{formatCurrency(bill.reservation.totalFee)}</p>
+              <Link
+                href={`/dashboard/reservations/${bill.reservation.id}`}
+                className="text-blue-600 hover:text-blue-500 text-sm"
+              >
+                View Details →
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Policy Selection */}
+      {bill.status === 'UNPAID' && bill.appointment && !bill.policy && bill.availablePolicies && bill.availablePolicies.length > 0 && (
+        <div className="card">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Apply Insurance Policy</h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="form-label">Select Policy</label>
+              <select
+                className="form-select"
+                value={selectedPolicyId}
+                onChange={(e) => setSelectedPolicyId(e.target.value)}
+              >
+                <option value="">Select a policy</option>
+                {bill.availablePolicies.map((policy) => (
+                  <option key={policy.id} value={policy.id}>
+                    {policy.id} - {policy.company.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={handlePolicySelect}
+              disabled={!selectedPolicyId}
+              className="btn-primary"
+            >
+              <ShieldCheckIcon className="w-4 h-4 mr-2" />
+              Apply Policy
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Applied Policy */}
       {bill.policy && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Applied Insurance Policy
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 bg-green-50 rounded-lg">
-              <p className="font-medium">Policy: {bill.policy.id}</p>
-              <p className="text-sm text-gray-600">Company: {bill.policy.company.name}</p>
+        <div className="card">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Applied Insurance</h2>
+          
+          <div className="p-4 bg-green-50 rounded-lg">
+            <div className="flex items-center space-x-3 mb-3">
+              <ShieldCheckIcon className="w-6 h-6 text-green-600" />
+              <h3 className="font-semibold text-green-900">Policy Applied</h3>
             </div>
+            <p className="text-green-800">Policy ID: {bill.policy.id}</p>
+            <p className="text-green-800">Company: {bill.policy.company.name}</p>
+          </div>
+        </div>
+      )}
 
-            {bill.treatments_covered && bill.treatments_covered.length > 0 && (
-              <div>
-                <p className="font-medium text-gray-700 mb-2">Treatments Covered:</p>
-                <div className="space-y-2">
-                  {bill.treatments_covered.map((covered, index) => (
-                    <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                      <span className="text-sm">{covered.treatment}</span>
-                      <span className="text-sm font-medium text-green-600">
-                        -{formatCurrency(covered.amount)}
-                      </span>
+      {/* Price Details Modal */}
+      {showPriceModal && (
+        <div className="modal-container">
+          <div className="modal-backdrop" onClick={() => setShowPriceModal(false)}></div>
+          <div className="flex items-center justify-center min-h-full p-4">
+            <div className="modal-content max-w-lg">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Price Breakdown
+                </h3>
+                
+                <div className="space-y-3">
+                  {bill.appointment && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Appointment Fee:</span>
+                      <span>{formatCurrency(bill.appointment.totalFee)}</span>
                     </div>
-                  ))}
+                  )}
+                  
+                  {bill.prescription && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Prescription Cost:</span>
+                      <span>{formatCurrency(bill.prescription.totalPrice)}</span>
+                    </div>
+                  )}
+                  
+                  {bill.reservation && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span>Room Reservation:</span>
+                      <span>{formatCurrency(bill.reservation.totalFee)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between py-2 border-b font-semibold">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(bill.subtotal)}</span>
+                  </div>
+                  
+                  {bill.coveragesUsed && bill.coveragesUsed.length > 0 && (
+                    <>
+                      <p className="text-sm font-medium text-gray-600 mt-4 mb-2">Insurance Coverage:</p>
+                      {bill.coveragesUsed.map((coverage) => (
+                        <div key={coverage.id} className="flex justify-between py-1">
+                          <span className="text-green-600">- {coverage.name}</span>
+                          <span className="text-green-600">-{formatCurrency(coverage.coverageAmount)}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  
+                  <div className="flex justify-between py-3 border-t font-bold text-lg">
+                    <span>Total Amount Due:</span>
+                    <span className="text-blue-600">{formatCurrency(bill.totalAmountDue)}</span>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end mt-6">
+                  <button
+                    onClick={() => setShowPriceModal(false)}
+                    className="btn-primary"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Payment Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span className="font-medium">{formatCurrency(bill.subtotal)}</span>
-          </div>
-          
-          {bill.treatments_covered && bill.treatments_covered.length > 0 && (
-            <div className="flex justify-between text-green-600">
-              <span>Insurance Coverage</span>
-              <span className="font-medium">
-                -{formatCurrency(bill.treatments_covered.reduce((sum, c) => sum + c.amount, 0))}
-              </span>
             </div>
-          )}
-          
-          <div className="border-t pt-3 flex justify-between text-lg font-bold">
-            <span>Total Amount Due</span>
-            <span className={bill.status === 'paid' ? 'text-green-600' : 'text-red-600'}>
-              {formatCurrency(bill.total_amount_due)}
-            </span>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Payment Action */}
-      {canPay && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment</CardTitle>
-            <CardDescription>
-              Complete your payment to finalize this bill
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="lg" className="w-full">
-                  <CreditCard className="h-5 w-5 mr-2" />
-                  Pay {formatCurrency(bill.total_amount_due)}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Confirm Payment</DialogTitle>
-                  <DialogDescription>
-                    Are you sure you want to pay {formatCurrency(bill.total_amount_due)} for this bill?
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Bill ID: {bill.id}</p>
-                    <p className="text-lg font-medium">Amount: {formatCurrency(bill.total_amount_due)}</p>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline">Cancel</Button>
-                    <Button onClick={payBill} disabled={paying}>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      {paying ? 'Processing...' : 'Confirm Payment'}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Paid Status */}
-      {bill.status === 'paid' && (
-        <Card className="bg-green-50 border-green-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center gap-2 text-green-700">
-              <CheckCircle className="h-6 w-6" />
-              <span className="text-lg font-medium">Bill Paid Successfully</span>
-            </div>
-            <p className="text-center text-green-600 mt-2">
-              Thank you for your payment. This bill has been settled.
-            </p>
-          </CardContent>
-        </Card>
+        </div>
       )}
     </div>
   );

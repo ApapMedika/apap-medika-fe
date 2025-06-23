@@ -1,52 +1,38 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  Calendar, 
-  Plus, 
-  Search, 
-  Filter, 
-  Eye, 
-  Edit, 
-  Trash2,
-  Clock,
-  User,
-  Stethoscope,
-  BarChart3
-} from 'lucide-react';
-import Link from 'next/link';
+import { formatDate } from '@/utils/format';
+import { APPOINTMENT_STATUS } from '@/utils/constants';
+import {
+  CalendarDaysIcon,
+  PlusIcon,
+  MagnifyingGlassIcon,
+  ChartBarIcon,
+} from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface Appointment {
   id: string;
   patient: {
-    user: { name: string };
+    id: string;
+    name: string;
     nik: string;
   };
   doctor: {
-    user: { name: string };
-    specialization: number;
+    id: string;
+    name: string;
+    specialization: string;
   };
-  date: string;
+  appointmentDate: string;
   status: number;
   diagnosis?: string;
-  total_fee: number;
-  created_at: string;
+  treatments?: string[];
+  totalFee: number;
+  createdAt: string;
 }
-
-const statusMap = {
-  0: { label: 'Created', color: 'bg-blue-100 text-blue-800' },
-  1: { label: 'Done', color: 'bg-green-100 text-green-800' },
-  2: { label: 'Cancelled', color: 'bg-red-100 text-red-800' },
-};
 
 export default function AppointmentsPage() {
   const { user } = useAuth();
@@ -54,357 +40,218 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [showStatistics, setShowStatistics] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     fetchAppointments();
-  }, [statusFilter, fromDate, toDate]);
+  }, [statusFilter, dateFrom, dateTo]);
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
       const params: any = {};
       
-      if (statusFilter) params.status = statusFilter;
-      if (fromDate && toDate) {
-        params.from_date = fromDate;
-        params.to_date = toDate;
+      // Role-based filtering
+      if (user?.role === 'doctor') {
+        params.doctor = user.id;
+      } else if (user?.role === 'patient') {
+        params.patient = user.id;
       }
-
-      const response = await apiClient.getAppointments(params);
-      setAppointments(response.results || response);
+      
+      if (statusFilter) params.status = statusFilter;
+      if (dateFrom) params.dateFrom = dateFrom;
+      if (dateTo) params.dateTo = dateTo;
+      
+      const data = await apiClient.getAppointments(params);
+      setAppointments(Array.isArray(data) ? data : data.results || []);
     } catch (error) {
-      toast.error('Failed to fetch appointments');
-      console.error('Error fetching appointments:', error);
+      console.error('Failed to fetch appointments:', error);
+      toast.error('Failed to load appointments');
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredAppointments = appointments.filter(appointment => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      appointment.patient.user.name.toLowerCase().includes(searchLower) ||
-      appointment.doctor.user.name.toLowerCase().includes(searchLower) ||
-      appointment.id.toLowerCase().includes(searchLower)
-    );
-  });
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const getStatusBadge = (status: number) => {
+    switch (status) {
+      case APPOINTMENT_STATUS.CREATED:
+        return <span className="badge badge-warning">Created</span>;
+      case APPOINTMENT_STATUS.DONE:
+        return <span className="badge badge-success">Done</span>;
+      case APPOINTMENT_STATUS.CANCELLED:
+        return <span className="badge badge-danger">Cancelled</span>;
+      default:
+        return <span className="badge badge-gray">Unknown</span>;
+    }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-    }).format(amount);
-  };
+  const filteredAppointments = appointments.filter(appointment =>
+    appointment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    appointment.doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    appointment.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const canCreateAppointment = user?.role === 'admin';
-  const canViewAll = ['admin', 'nurse'].includes(user?.role || '');
-  const canEdit = user?.role === 'admin';
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
-          <p className="text-gray-600">
-            {user?.role === 'doctor' && 'Manage your patient appointments'}
-            {user?.role === 'admin' && 'Manage all appointments in the system'}
-            {user?.role === 'nurse' && 'View and monitor patient appointments'}
-            {user?.role === 'patient' && 'View your scheduled appointments'}
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <CalendarDaysIcon className="w-8 h-8 text-blue-600" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {user?.role === 'doctor' ? 'My Appointments' : 
+               user?.role === 'patient' ? 'My Appointments' : 
+               'All Appointments'}
+            </h1>
+            <p className="text-gray-600">
+              {user?.role === 'doctor' ? 'Manage your patient appointments' :
+               user?.role === 'patient' ? 'View your scheduled appointments' :
+               'Manage hospital appointments'}
+            </p>
+          </div>
         </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowStatistics(true)}
-            className="flex items-center gap-2"
+        <div className="flex space-x-3">
+          <Link
+            href="/dashboard/appointments/statistics"
+            className="btn-outline btn-sm"
           >
-            <BarChart3 className="h-4 w-4" />
-            Show Statistics
-          </Button>
-          
+            <ChartBarIcon className="w-4 h-4 mr-2" />
+            Statistics
+          </Link>
           {canCreateAppointment && (
-            <Link href="/dashboard/appointments/create">
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Appointment
-              </Button>
+            <Link
+              href="/dashboard/appointments/create"
+              className="btn-primary btn-sm"
+            >
+              <PlusIcon className="w-4 h-4 mr-2" />
+              Add Appointment
             </Link>
           )}
         </div>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Search */}
-            <div className="space-y-2">
-              <Label>Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search by patient, doctor, or ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
-                  <SelectItem value="0">Created</SelectItem>
-                  <SelectItem value="1">Done</SelectItem>
-                  <SelectItem value="2">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Date Range */}
-            <div className="space-y-2">
-              <Label>From Date</Label>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>To Date</Label>
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
+      <div className="card">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="relative">
+            <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search appointments..."
+              className="form-input pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-        </CardContent>
-      </Card>
+          
+          <select
+            className="form-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All Status</option>
+            <option value="0">Created</option>
+            <option value="1">Done</option>
+            <option value="2">Cancelled</option>
+          </select>
 
-      {/* Appointments Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Appointments ({filteredAppointments.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : filteredAppointments.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500">No appointments found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium text-gray-900">ID</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Patient</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Doctor</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Date</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Status</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Fee</th>
-                    <th className="text-left p-3 font-medium text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAppointments.map((appointment) => (
-                    <tr key={appointment.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 font-mono text-sm">{appointment.id}</td>
-                      <td className="p-3">
-                        <div>
-                          <p className="font-medium">{appointment.patient.user.name}</p>
-                          <p className="text-sm text-gray-500">NIK: {appointment.patient.nik}</p>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Stethoscope className="h-4 w-4 text-blue-600" />
-                          <span>{appointment.doctor.user.name}</span>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm">{formatDate(appointment.date)}</span>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          statusMap[appointment.status as keyof typeof statusMap]?.color
-                        }`}>
-                          {statusMap[appointment.status as keyof typeof statusMap]?.label}
-                        </span>
-                      </td>
-                      <td className="p-3 font-medium">
-                        {formatCurrency(appointment.total_fee)}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Link href={`/dashboard/appointments/${appointment.id}`}>
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </Link>
-                          
-                          {canEdit && appointment.status === 0 && (
-                            <Link href={`/dashboard/appointments/${appointment.id}/edit`}>
-                              <Button variant="outline" size="sm">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <input
+            type="date"
+            className="form-input"
+            placeholder="From Date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
 
-      {/* Statistics Modal */}
-      <Dialog open={showStatistics} onOpenChange={setShowStatistics}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Appointment Statistics</DialogTitle>
-          </DialogHeader>
-          <AppointmentStatistics />
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-// Statistics Component
-function AppointmentStatistics() {
-  const [period, setPeriod] = useState('monthly');
-  const [year, setYear] = useState(new Date().getFullYear().toString());
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-
-  const fetchStats = async () => {
-    try {
-      setLoading(true);
-      const response = await apiClient.getAppointmentStatistics(period, parseInt(year));
-      setStats(response);
-    } catch (error) {
-      toast.error('Failed to fetch statistics');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-  }, [period, year]);
-
-  return (
-    <div className="space-y-6">
-      {/* Controls */}
-      <div className="flex gap-4">
-        <div className="space-y-2">
-          <Label>Period</Label>
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="quarterly">Quarterly</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="space-y-2">
-          <Label>Year</Label>
-          <Select value={year} onValueChange={setYear}>
-            <SelectTrigger className="w-24">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: 5 }, (_, i) => {
-                const yr = new Date().getFullYear() - 2 + i;
-                return (
-                  <SelectItem key={yr} value={yr.toString()}>
-                    {yr}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+          <input
+            type="date"
+            className="form-input"
+            placeholder="To Date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
         </div>
       </div>
 
-      {/* Stats Display */}
-      {loading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      ) : stats ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-600 font-medium">Total</p>
-              <p className="text-2xl font-bold text-blue-900">{stats.total || 0}</p>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-600 font-medium">Completed</p>
-              <p className="text-2xl font-bold text-green-900">{stats.completed || 0}</p>
-            </div>
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <p className="text-sm text-yellow-600 font-medium">Pending</p>
-              <p className="text-2xl font-bold text-yellow-900">{stats.pending || 0}</p>
-            </div>
-            <div className="bg-red-50 p-4 rounded-lg">
-              <p className="text-sm text-red-600 font-medium">Cancelled</p>
-              <p className="text-2xl font-bold text-red-900">{stats.cancelled || 0}</p>
-            </div>
+      {/* Appointments Table */}
+      <div className="card">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="spinner w-8 h-8"></div>
           </div>
-          
-          {/* Chart placeholder - you can integrate Chart.js here */}
-          <div className="bg-gray-50 p-8 rounded-lg text-center">
-            <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-2" />
-            <p className="text-gray-500">Chart visualization would go here</p>
-            <p className="text-sm text-gray-400">Integrate with Chart.js for detailed analytics</p>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead className="table-header">
+                <tr>
+                  <th className="table-header-cell">ID</th>
+                  <th className="table-header-cell">Patient</th>
+                  <th className="table-header-cell">Doctor</th>
+                  <th className="table-header-cell">Date</th>
+                  <th className="table-header-cell">Status</th>
+                  <th className="table-header-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="table-body">
+                {filteredAppointments.map((appointment) => (
+                  <tr key={appointment.id}>
+                    <td className="table-cell font-mono text-sm">
+                      {appointment.id}
+                    </td>
+                    <td className="table-cell">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {appointment.patient.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          NIK: {appointment.patient.nik}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {appointment.doctor.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {appointment.doctor.specialization}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="table-cell">
+                      {formatDate(appointment.appointmentDate)}
+                    </td>
+                    <td className="table-cell">
+                      {getStatusBadge(appointment.status)}
+                    </td>
+                    <td className="table-cell">
+                      <Link
+                        href={`/dashboard/appointments/${appointment.id}`}
+                        className="btn-primary btn-sm"
+                      >
+                        Details
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+                {filteredAppointments.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="table-cell text-center py-12">
+                      <div className="text-gray-500">
+                        <CalendarDaysIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No appointments found</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
-      ) : (
-        <p className="text-center text-gray-500">No statistics available</p>
-      )}
+        )}
+      </div>
     </div>
   );
 }

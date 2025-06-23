@@ -2,17 +2,11 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Heart, Eye, EyeOff } from 'lucide-react';
+import { HeartIcon, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 const roles = [
-  { value: 'admin', label: 'Admin' },
   { value: 'doctor', label: 'Doctor' },
   { value: 'nurse', label: 'Nurse' },
   { value: 'pharmacist', label: 'Pharmacist' },
@@ -95,6 +89,7 @@ export default function SignupPage() {
   };
 
   const validateForm = () => {
+    // ... (Validation logic remains the same)
     if (!formData.name || !formData.username || !formData.email || !formData.password || !formData.gender || !formData.role) {
       toast.error('Please fill in all required fields');
       return false;
@@ -133,7 +128,6 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
 
     setLoading(true);
@@ -174,282 +168,312 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center space-x-2 mb-4">
-            <Heart className="h-8 w-8 text-blue-600" />
-            <span className="text-2xl font-bold gradient-text">ApapMedika</span>
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-600">Join our healthcare management system</p>
-        </div>
+    <div className="h-screen flex">
+      <div className="flex-1 flex flex-col py-12 px-4 sm:px-6 lg:flex-none lg:w-3/5 xl:w-1/2 bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-y-auto">
+        <div className="mx-auto w-full max-w-lg">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <Link href="/" className="inline-flex items-center space-x-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <HeartIcon className="h-7 w-7 text-white" />
+              </div>
+              <span className="text-3xl font-bold gradient-text">ApapMedika</span>
+            </Link>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h1>
+            <p className="text-gray-600">Join our healthcare management system</p>
+          </div>
 
-        {/* Signup Form */}
-        <Card className="shadow-glow">
-          <CardHeader>
-            <CardTitle>Sign Up</CardTitle>
-            <CardDescription>
-              Fill in your information to create your account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="Enter your full name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
+          {/* Signup Form */}
+          <div className="card shadow-glow mb-12">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign Up</h2>
+              <p className="text-gray-600 mb-6">Fill in your information to create your account</p>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Basic Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Full Name *</label>
+                    <input
+                      type="text"
+                      placeholder="Enter your full name"
+                      className="form-input text-gray-900"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label">Username *</label>
+                    <input
+                      type="text"
+                      placeholder="Choose a username"
+                      className="form-input text-gray-900"
+                      value={formData.username}
+                      onChange={(e) => handleInputChange('username', e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="form-label">Email *</label>
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    className="form-input text-gray-900"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username *</Label>
-                  <Input
-                    id="username"
-                    placeholder="Choose a username"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Password *</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Create a password"
+                        className="form-input pr-10 text-gray-900"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Create a password"
-                      value={formData.password}
-                      onChange={(e) => handleInputChange('password', e.target.value)}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                  <div>
+                    <label className="form-label">Confirm Password *</label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        placeholder="Confirm your password"
+                        className="form-input pr-10 text-gray-900"
+                        value={formData.confirmPassword}
+                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      placeholder="Confirm your password"
-                      value={formData.confirmPassword}
-                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Gender *</label>
+                    <select
+                      className="form-select text-gray-900"
+                      value={formData.gender}
+                      onChange={(e) => handleInputChange('gender', e.target.value)}
                       required
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                      <option value="" disabled className="text-gray-400">Select gender</option>
+                      <option value="male" className="text-gray-900">Male</option>
+                      <option value="female" className="text-gray-900">Female</option>
+                    </select>
                   </div>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Gender *</Label>
-                  <Select onValueChange={(value) => handleInputChange('gender', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Role *</Label>
-                  <Select onValueChange={(value) => handleInputChange('role', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
+                  <div>
+                    <label className="form-label">Role *</label>
+                    <select
+                      className="form-select text-gray-900"
+                      value={formData.role}
+                      onChange={(e) => handleInputChange('role', e.target.value)}
+                      required
+                    >
+                      <option value="" disabled className="text-gray-400">Select role</option>
                       {roles.map((role) => (
-                        <SelectItem key={role.value} value={role.value}>
+                        <option key={role.value} value={role.value} className="text-gray-900">
                           {role.label}
-                        </SelectItem>
+                        </option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                  </div>
                 </div>
-              </div>
 
-              {/* Patient Specific Fields */}
-              {formData.role === 'patient' && (
-                <div className="space-y-4 border-t pt-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="nik">NIK (16 digits) *</Label>
-                    <Input
-                      id="nik"
-                      placeholder="Enter 16-digit NIK"
-                      value={formData.nik}
-                      onChange={(e) => handleInputChange('nik', e.target.value)}
-                      maxLength={16}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="birthPlace">Birth Place *</Label>
-                      <Input
-                        id="birthPlace"
-                        placeholder="Enter birth place"
-                        value={formData.birthPlace}
-                        onChange={(e) => handleInputChange('birthPlace', e.target.value)}
+                {/* Patient Specific Fields */}
+                {formData.role === 'patient' && (
+                  <div className="space-y-4 border-t pt-6">
+                    <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
+                    <div>
+                      <label className="form-label">NIK (16 digits) *</label>
+                      <input
+                        type="text"
+                        placeholder="Enter 16-digit NIK"
+                        className="form-input text-gray-900"
+                        value={formData.nik}
+                        onChange={(e) => handleInputChange('nik', e.target.value)}
+                        maxLength={16}
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="birthDate">Birth Date *</Label>
-                      <Input
-                        id="birthDate"
-                        type="date"
-                        value={formData.birthDate}
-                        onChange={(e) => handleInputChange('birthDate', e.target.value)}
-                      />
-                    </div>
-                  </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="form-label">Birth Place *</label>
+                        <input
+                          type="text"
+                          placeholder="Enter birth place"
+                          className="form-input text-gray-900"
+                          value={formData.birthPlace}
+                          onChange={(e) => handleInputChange('birthPlace', e.target.value)}
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label>Patient Class *</Label>
-                    <Select onValueChange={(value) => handleInputChange('pClass', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select patient class" />
-                      </SelectTrigger>
-                      <SelectContent>
+                      <div>
+                        <label className="form-label">Birth Date *</label>
+                        <input
+                          type="date"
+                          className="form-input text-gray-900"
+                          value={formData.birthDate}
+                          onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="form-label">Patient Class *</label>
+                      <select
+                        className="form-select text-gray-900"
+                        value={formData.pClass}
+                        onChange={(e) => handleInputChange('pClass', e.target.value)}
+                      >
+                        <option value="" disabled className="text-gray-400">Select patient class</option>
                         {patientClasses.map((pClass) => (
-                          <SelectItem key={pClass.value} value={pClass.value.toString()}>
+                          <option key={pClass.value} value={pClass.value.toString()} className="text-gray-900">
                             {pClass.label}
-                          </SelectItem>
+                          </option>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </select>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Doctor Specific Fields */}
-              {formData.role === 'doctor' && (
-                <div className="space-y-4 border-t pt-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Doctor Information</h3>
-                  
-                  <div className="space-y-2">
-                    <Label>Specialization *</Label>
-                    <Select onValueChange={(value) => handleInputChange('specialization', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select specialization" />
-                      </SelectTrigger>
-                      <SelectContent>
+                {/* Doctor Specific Fields */}
+                {formData.role === 'doctor' && (
+                  <div className="space-y-4 border-t pt-6">
+                    <h3 className="text-lg font-semibold text-gray-900">Doctor Information</h3>
+                    <div>
+                      <label className="form-label">Specialization *</label>
+                      <select
+                        className="form-select text-gray-900"
+                        value={formData.specialization}
+                        onChange={(e) => handleInputChange('specialization', e.target.value)}
+                      >
+                        <option value="" disabled className="text-gray-400">Select specialization</option>
                         {specializations.map((spec) => (
-                          <SelectItem key={spec.value} value={spec.value.toString()}>
+                          <option key={spec.value} value={spec.value.toString()} className="text-gray-900">
                             {spec.label}
-                          </SelectItem>
+                          </option>
                         ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="yearsOfExperience">Years of Experience *</Label>
-                      <Input
-                        id="yearsOfExperience"
-                        type="number"
-                        placeholder="Enter years of experience"
-                        value={formData.yearsOfExperience}
-                        onChange={(e) => handleInputChange('yearsOfExperience', e.target.value)}
-                        min="0"
-                      />
+                      </select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="fee">Consultation Fee (Rp) *</Label>
-                      <Input
-                        id="fee"
-                        type="number"
-                        placeholder="Enter consultation fee"
-                        value={formData.fee}
-                        onChange={(e) => handleInputChange('fee', e.target.value)}
-                        min="0"
-                        step="1000"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="form-label">Years of Experience *</label>
+                        <input
+                          type="number"
+                          placeholder="Enter years of experience"
+                          className="form-input text-gray-900"
+                          value={formData.yearsOfExperience}
+                          onChange={(e) => handleInputChange('yearsOfExperience', e.target.value)}
+                          min="0"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="form-label">Consultation Fee (Rp) *</label>
+                        <input
+                          type="number"
+                          placeholder="Enter consultation fee"
+                          className="form-input text-gray-900"
+                          value={formData.fee}
+                          onChange={(e) => handleInputChange('fee', e.target.value)}
+                          min="0"
+                          step="1000"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="form-label">Practice Schedule *</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-2">
+                        {schedules.map((schedule) => (
+                          <button
+                            key={schedule.value}
+                            type="button"
+                            className={`p-2 text-sm rounded border transition-colors ${
+                              formData.schedules.includes(schedule.value)
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-gray-700 border-gray-300 hover:border-blue-600 hover:text-blue-600'
+                            }`}
+                            onClick={() => handleScheduleToggle(schedule.value)}
+                          >
+                            {schedule.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">Select the days you will be available</p>
                     </div>
                   </div>
+                )}
 
-                  <div className="space-y-2">
-                    <Label>Practice Schedule *</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {schedules.map((schedule) => (
-                        <button
-                          key={schedule.value}
-                          type="button"
-                          className={`p-2 text-sm rounded border transition-colors ${
-                            formData.schedules.includes(schedule.value)
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white text-gray-700 border-gray-300 hover:border-blue-600'
-                          }`}
-                          onClick={() => handleScheduleToggle(schedule.value)}
-                        >
-                          {schedule.label}
-                        </button>
-                      ))}
+                <button type="submit" className="w-full btn-primary" disabled={loading}>
+                  {loading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-5 h-5 border-b-2 border-white rounded-full animate-spin mr-2"></div>
+                      Creating Account...
                     </div>
-                    <p className="text-xs text-gray-500">Select the days you will be available</p>
-                  </div>
-                </div>
-              )}
+                  ) : (
+                    'Create Account'
+                  )}
+                </button>
+              </form>
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating Account...' : 'Create Account'}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{' '}
-                <Link href="/login" className="text-blue-600 hover:text-blue-500 font-medium">
-                  Sign in here
-                </Link>
-              </p>
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600">
+                  Already have an account?{' '}
+                  <Link href="/login" className="text-blue-600 hover:text-blue-500 font-medium transition-colors">
+                    Sign in here
+                  </Link>
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Image */}
+      <div className="hidden lg:block relative flex-1">
+        <img
+          className="absolute inset-0 h-full w-full object-cover"
+          src="https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=1920&h=1080&fit=crop"
+          alt="Healthcare team collaboration"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-indigo-600/70 to-indigo-400/30 flex items-end">
+          <div className="p-12 text-white">
+            <h3 className="text-4xl font-bold mb-4">
+              Join Our Healthcare Network
+            </h3>
+            <p className="text-xl text-indigo-100">
+              Become part of a comprehensive healthcare management system that connects patients, doctors, and medical professionals.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
