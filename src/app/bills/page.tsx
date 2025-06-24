@@ -394,7 +394,7 @@ export default function BillsPage() {
                     </td>
                     <td className="table-cell">
                       <Link
-                        href={`/dashboard/bills/${bill.id}`}
+                        href={`/bills/${bill.id}`}
                         className="btn-sm btn-outline flex items-center space-x-1"
                       >
                         <EyeIcon className="w-4 h-4" />

@@ -151,7 +151,7 @@ export default function CreatePolicyPage() {
       });
       
       toast.success(`Policy created successfully! ID: ${result.id}`);
-      router.push('/dashboard/policies');
+      router.push('/policies');
     } catch (error: any) {
       console.error('Failed to create policy:', error);
       if (error.response?.status === 400) {
@@ -230,7 +230,7 @@ export default function CreatePolicyPage() {
               <h2 className="text-xl font-semibold text-gray-900">Patient Information</h2>
               {canUpgradeClass && (
                 <Link
-                  href={`/dashboard/patients/upgrade-class?nik=${selectedPatient.nik}`}
+                  href={`/patients/upgrade-class?nik=${selectedPatient.nik}`}
                   className="btn-outline btn-sm"
                 >
                   Upgrade Class
@@ -364,7 +364,7 @@ export default function CreatePolicyPage() {
                       </p>
                       {canUpgradeClass ? (
                         <Link
-                          href={`/dashboard/patients/upgrade-class?nik=${selectedPatient.nik}`}
+                          href={`/patients/upgrade-class?nik=${selectedPatient.nik}`}
                           className="inline-block mt-2 text-xs text-red-600 hover:text-red-500 underline"
                         >
                           Upgrade patient class to increase limit →

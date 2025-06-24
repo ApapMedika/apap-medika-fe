@@ -156,13 +156,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.message || data.detail || 'Signup failed');
       }
 
-      // Store token and user data
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setUser(data.user);
-
-      toast.success('Account created successfully!');
-      router.push('/dashboard');
+      // Redirect to login page
+      toast.success('Account created successfully! Please log in with your credentials.');
+      router.push('/login');
     } catch (error: any) {
       console.error('Signup error:', error);
       toast.error(error.message || 'Signup failed');
@@ -174,7 +170,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const token = localStorage.getItem('token');
       
-      // Try to call logout endpoint, but don't fail if it doesn't work
       if (token) {
         try {
           await fetch(`${API_BASE_URL}/logout/`, {
@@ -185,7 +180,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             },
           });
         } catch (error) {
-          // Ignore logout endpoint errors - still clear local storage
           console.warn('Logout endpoint failed, but clearing local storage:', error);
         }
       }
@@ -199,7 +193,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // Still clear local storage even if API call fails
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setUser(null);

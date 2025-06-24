@@ -62,7 +62,7 @@ export default function CreateMedicinePage() {
       });
       
       toast.success(`Successfully added medicine ${formData.name}`);
-      router.push('/dashboard/medicines');
+      router.push('/medicines');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create medicine');
     } finally {

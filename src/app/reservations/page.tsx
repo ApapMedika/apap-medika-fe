@@ -65,7 +65,7 @@ export default function ReservationsPage() {
   useEffect(() => {
     // Debounced search
     const debouncedFetch = debounce(fetchReservations, 500);
-    
+
     if (searchTerm !== '') {
       debouncedFetch();
     } else {
@@ -165,14 +165,14 @@ export default function ReservationsPage() {
         
         <div className="flex items-center space-x-3">
           {canViewStatistics && (
-            <Link href="/dashboard/reservations/statistics" className="btn-outline flex items-center space-x-2">
+            <Link href="/reservations/statistics" className="btn-outline flex items-center space-x-2">
               <ChartBarIcon className="w-5 h-5" />
               <span>Statistics</span>
             </Link>
           )}
           
           {canCreateReservation && (
-            <Link href="/dashboard/reservations/create" className="btn-primary flex items-center space-x-2">
+            <Link href="/reservations/create" className="btn-primary flex items-center space-x-2">
               <PlusIcon className="w-5 h-5" />
               <span>Create Reservation</span>
             </Link>
@@ -449,7 +449,7 @@ export default function ReservationsPage() {
                     
                     <td className="table-cell">
                       <Link
-                        href={`/dashboard/reservations/${reservation.id}`}
+                        href={`/reservations/${reservation.id}`}
                         className="btn-sm btn-outline flex items-center space-x-1"
                       >
                         <EyeIcon className="w-4 h-4" />

@@ -126,7 +126,7 @@ export default function CreateAppointmentPage() {
       });
       
       toast.success(`Appointment created successfully! ID: ${result.id}`);
-      router.push('/dashboard/appointments');
+      router.push('/appointments');
     } catch (error: any) {
       console.error('Failed to create appointment:', error);
       if (error.response?.status === 400) {

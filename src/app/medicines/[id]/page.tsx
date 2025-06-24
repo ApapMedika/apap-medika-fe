@@ -53,7 +53,7 @@ export default function MedicineDetailPage() {
     } catch (error) {
       console.error('Failed to fetch medicine:', error);
       toast.error('Failed to load medicine details');
-      router.push('/dashboard/medicines');
+      router.push('/medicines');
     } finally {
       setLoading(false);
     }
@@ -91,7 +91,7 @@ export default function MedicineDetailPage() {
       setActionLoading(true);
       await apiClient.deleteMedicine(medicine.id);
       toast.success('Medicine deleted successfully');
-      router.push('/dashboard/medicines');
+      router.push('/medicines');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete medicine');
     } finally {
@@ -126,7 +126,7 @@ export default function MedicineDetailPage() {
       <div className="card text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Medicine Not Found</h1>
         <p className="text-gray-600 mb-4">The medicine you're looking for doesn't exist.</p>
-        <Link href="/dashboard/medicines" className="btn-primary">
+        <Link href="/medicines" className="btn-primary">
           Back to Medicines
         </Link>
       </div>
@@ -317,7 +317,7 @@ export default function MedicineDetailPage() {
           <div className="flex items-center space-x-3">
             {canEdit && (
               <Link
-                href={`/dashboard/medicines/${medicine.id}/edit`}
+                href={`/medicines/${medicine.id}/edit`}
                 className="btn-outline flex items-center space-x-2"
               >
                 <PencilIcon className="w-5 h-5" />

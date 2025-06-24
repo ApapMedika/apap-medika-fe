@@ -55,7 +55,7 @@ export default function PoliciesPage() {
   useEffect(() => {
     // Debounced search
     const debouncedFetch = debounce(fetchPolicies, 500);
-    
+
     if (searchTerm !== '') {
       debouncedFetch();
     } else {
@@ -150,14 +150,14 @@ export default function PoliciesPage() {
         
         <div className="flex items-center space-x-3">
           {canViewStatistics && (
-            <Link href="/dashboard/policies/statistics" className="btn-outline flex items-center space-x-2">
+            <Link href="/policies/statistics" className="btn-outline flex items-center space-x-2">
               <ChartBarIcon className="w-5 h-5" />
               <span>Statistics</span>
             </Link>
           )}
           
           {canCreatePolicy && (
-            <Link href="/dashboard/policies/create" className="btn-primary flex items-center space-x-2">
+            <Link href="/policies/create" className="btn-primary flex items-center space-x-2">
               <PlusIcon className="w-5 h-5" />
               <span>Create Policy</span>
             </Link>
@@ -462,7 +462,7 @@ export default function PoliciesPage() {
                     
                     <td className="table-cell">
                       <Link
-                        href={`/dashboard/policies/${policy.id}`}
+                        href={`/policies/${policy.id}`}
                         className="btn-sm btn-outline flex items-center space-x-1"
                       >
                         <EyeIcon className="w-4 h-4" />

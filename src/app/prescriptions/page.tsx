@@ -54,7 +54,7 @@ export default function PrescriptionsPage() {
   useEffect(() => {
     // Debounced search
     const debouncedFetch = debounce(fetchPrescriptions, 500);
-    
+
     if (searchTerm !== '') {
       debouncedFetch();
     } else {
@@ -146,7 +146,7 @@ export default function PrescriptionsPage() {
         
         <div className="flex items-center space-x-3">
           {canViewStatistics && (
-            <Link href="/dashboard/prescriptions/statistics" className="btn-outline flex items-center space-x-2">
+            <Link href="/prescriptions/statistics" className="btn-outline flex items-center space-x-2">
               <ChartBarIcon className="w-5 h-5" />
               <span>Statistics</span>
             </Link>
@@ -360,7 +360,7 @@ export default function PrescriptionsPage() {
                           {formatDate(prescription.createdAt)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {new Date(prescription.createdAt).toLocaleTimeString('en-US', {
+                          {new Date(prescription.createdAt).toLocaleTimeString('en-ID', {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
@@ -390,7 +390,7 @@ export default function PrescriptionsPage() {
                     )}
                     <td className="table-cell">
                       <Link
-                        href={`/dashboard/prescriptions/${prescription.id}`}
+                        href={`/prescriptions/${prescription.id}`}
                         className="btn-sm btn-outline flex items-center space-x-1"
                       >
                         <EyeIcon className="w-4 h-4" />

@@ -77,7 +77,7 @@ export default function AppointmentNotePage() {
     } catch (error) {
       console.error('Failed to fetch appointment:', error);
       toast.error('Failed to load appointment details');
-      router.push('/dashboard/appointments');
+      router.push('/appointments');
     } finally {
       setLoading(false);
     }
@@ -138,7 +138,7 @@ export default function AppointmentNotePage() {
       );
       
       toast.success(`Successfully recorded diagnosis & treatment for appointment ${params.id}`);
-      router.push(`/dashboard/appointments/${params.id}`);
+      router.push(`/appointments/${params.id}`);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update appointment');
     } finally {

@@ -64,7 +64,7 @@ export default function PrescriptionDetailPage() {
     } catch (error) {
       console.error('Failed to fetch prescription:', error);
       toast.error('Failed to load prescription details');
-      router.push('/dashboard/prescriptions');
+      router.push('/prescriptions');
     } finally {
       setLoading(false);
     }
@@ -80,9 +80,9 @@ export default function PrescriptionDetailPage() {
       
       // Redirect based on user role
       if (user?.role === 'doctor' && prescription.appointment) {
-        router.push(`/dashboard/appointments/${prescription.appointment.id}`);
+        router.push(`/appointments/${prescription.appointment.id}`);
       } else {
-        router.push('/dashboard/prescriptions');
+        router.push('/prescriptions');
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to cancel prescription');
@@ -126,7 +126,7 @@ export default function PrescriptionDetailPage() {
       <div className="card text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Prescription Not Found</h1>
         <p className="text-gray-600 mb-4">The prescription you're looking for doesn't exist.</p>
-        <Link href="/dashboard/prescriptions" className="btn-primary">
+        <Link href="/prescriptions" className="btn-primary">
           Back to Prescriptions
         </Link>
       </div>
@@ -157,7 +157,7 @@ export default function PrescriptionDetailPage() {
         <div className="flex space-x-3">
           {canMarkDone && (
             <Link
-              href={`/dashboard/prescriptions/${prescription.id}/process`}
+              href={`/prescriptions/${prescription.id}/process`}
               className="btn-primary btn-sm"
             >
               <CheckIcon className="w-4 h-4 mr-2" />
@@ -167,7 +167,7 @@ export default function PrescriptionDetailPage() {
           
           {canUpdate && (
             <Link
-              href={`/dashboard/prescriptions/${prescription.id}/edit`}
+              href={`/prescriptions/${prescription.id}/edit`}
               className="btn-outline btn-sm"
             >
               <PencilIcon className="w-4 h-4 mr-2" />
@@ -250,7 +250,7 @@ export default function PrescriptionDetailPage() {
                 <label className="text-sm font-medium text-gray-600">Related Appointment</label>
                 <div className="mt-1">
                   <Link
-                    href={`/dashboard/appointments/${prescription.appointment.id}`}
+                    href={`/appointments/${prescription.appointment.id}`}
                     className="text-blue-600 hover:text-blue-500 font-medium"
                   >
                     {prescription.appointment.id}
@@ -284,7 +284,7 @@ export default function PrescriptionDetailPage() {
                 <tr key={index}>
                   <td className="table-cell">
                     <Link
-                      href={`/dashboard/medicines/${item.medicine.id}`}
+                      href={`/medicines/${item.medicine.id}`}
                       className="text-blue-600 hover:text-blue-500 font-mono text-sm"
                     >
                       {item.medicine.id}

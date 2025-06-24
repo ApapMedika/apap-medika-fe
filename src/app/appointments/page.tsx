@@ -148,14 +148,14 @@ export default function AppointmentsPage() {
         
         <div className="flex items-center space-x-3">
           {canViewStatistics && (
-            <Link href="/dashboard/appointments/statistics" className="btn-outline flex items-center space-x-2">
+            <Link href="/appointments/statistics" className="btn-outline flex items-center space-x-2">
               <ChartBarIcon className="w-5 h-5" />
               <span>Statistics</span>
             </Link>
           )}
           
           {canCreateAppointment && (
-            <Link href="/dashboard/appointments/create" className="btn-primary flex items-center space-x-2">
+            <Link href="/appointments/create" className="btn-primary flex items-center space-x-2">
               <PlusIcon className="w-5 h-5" />
               <span>Create Appointment</span>
             </Link>
@@ -340,7 +340,7 @@ export default function AppointmentsPage() {
                           {formatDate(appointment.appointmentDate)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {new Date(appointment.appointmentDate).toLocaleTimeString('en-US', {
+                          {new Date(appointment.appointmentDate).toLocaleTimeString('en-ID', {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
@@ -352,7 +352,7 @@ export default function AppointmentsPage() {
                     </td>
                     <td className="table-cell">
                       <Link
-                        href={`/dashboard/appointments/${appointment.id}`}
+                        href={`/appointments/${appointment.id}`}
                         className="btn-sm btn-outline flex items-center space-x-1"
                       >
                         <EyeIcon className="w-4 h-4" />

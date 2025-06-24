@@ -147,13 +147,13 @@ export default function LoginPage() {
 
             {/* Demo Credentials */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm font-medium text-blue-900 mb-2">Demo Credentials:</p>
+              <p className="text-sm font-medium text-blue-900 mb-2">Demo Credentials</p>
               <div className="space-y-1 text-sm text-blue-700">
-                <p><strong>Admin:</strong> admin@apapmedika.com / admin123</p>
-                <p><strong>Doctor:</strong> doctor@apapmedika.com / doctor123</p>
-                <p><strong>Patient:</strong> patient@apapmedika.com / patient123</p>
-                <p><strong>Nurse:</strong> nurse@apapmedika.com / nurse123</p>
-                <p><strong>Pharmacist:</strong> pharmacist@apapmedika.com / pharmacist123</p>
+                <p><strong>Admin:</strong> admin@apapmedika.com | admin123</p>
+                <p><strong>Doctor:</strong> doctor1@apapmedika.com | doctor123</p>
+                <p><strong>Nurse:</strong> nurse1@apapmedika.com | nurse123</p>
+                <p><strong>Pharmacist:</strong> pharmacist1@apapmedika.com | pharmacist123</p>
+                <p><strong>Patient:</strong> patient1@example.com | patient123</p>
               </div>
             </div>
           </div>

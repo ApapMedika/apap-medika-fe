@@ -72,19 +72,19 @@ export default function DashboardPage() {
 
       // Fetch different data based on user role
       switch (user?.role) {
-        case 'admin':
+        case 'ADMIN':
           await fetchAdminData(dashboardStats);
           break;
-        case 'doctor':
+        case 'DOCTOR':
           await fetchDoctorData(dashboardStats);
           break;
-        case 'nurse':
+        case 'NURSE':
           await fetchNurseData(dashboardStats);
           break;
-        case 'pharmacist':
+        case 'PHARMACIST':
           await fetchPharmacistData(dashboardStats);
           break;
-        case 'patient':
+        case 'PATIENT':
           await fetchPatientData(dashboardStats);
           break;
       }
@@ -240,119 +240,119 @@ export default function DashboardPage() {
 
   const getQuickActions = () => {
     switch (user?.role) {
-      case 'admin':
+      case 'ADMIN':
         return [
           {
             title: 'Create Appointment',
             description: 'Schedule new patient appointment',
-            href: '/dashboard/appointments/create',
+            href: '/appointments/create',
             icon: CalendarDaysIcon,
             color: 'bg-gradient-to-br from-blue-500 to-blue-600'
           },
           {
             title: 'Create Policy',
             description: 'Create new insurance policy',
-            href: '/dashboard/policies/create',
+            href: '/policies/create',
             icon: ShieldCheckIcon,
             color: 'bg-gradient-to-br from-green-500 to-green-600'
           },
           {
             title: 'Upgrade Patient Class',
             description: 'Upgrade patient insurance class',
-            href: '/dashboard/patients/upgrade-class',
+            href: '/patients/upgrade-class',
             icon: UserGroupIcon,
             color: 'bg-gradient-to-br from-purple-500 to-purple-600'
           },
           {
             title: 'View Statistics',
             description: 'View system statistics',
-            href: '/dashboard/appointments/statistics',
+            href: '/appointments/statistics',
             icon: ChartBarIcon,
             color: 'bg-gradient-to-br from-orange-500 to-orange-600'
           }
         ];
 
-      case 'doctor':
+      case 'DOCTOR':
         return [
           {
             title: 'My Appointments',
             description: 'View and manage appointments',
-            href: '/dashboard/appointments',
+            href: '/appointments',
             icon: CalendarDaysIcon,
             color: 'bg-gradient-to-br from-blue-500 to-blue-600'
           },
           {
             title: 'Update Diagnosis',
             description: 'Add diagnosis and treatments',
-            href: '/dashboard/appointments',
+            href: '/appointments',
             icon: ClipboardDocumentListIcon,
             color: 'bg-gradient-to-br from-green-500 to-green-600'
           }
         ];
 
-      case 'nurse':
+      case 'NURSE':
         return [
           {
             title: 'Create Reservation',
             description: 'Book hospital room',
-            href: '/dashboard/reservations/create',
+            href: '/reservations/create',
             icon: BuildingOfficeIcon,
             color: 'bg-gradient-to-br from-purple-500 to-purple-600'
           },
           {
             title: 'View Appointments',
             description: 'Manage appointments',
-            href: '/dashboard/appointments',
+            href: '/appointments',
             icon: CalendarDaysIcon,
             color: 'bg-gradient-to-br from-blue-500 to-blue-600'
           }
         ];
 
-      case 'pharmacist':
+      case 'PHARMACIST':
         return [
           {
             title: 'Add Medicine',
             description: 'Add new medicine to inventory',
-            href: '/dashboard/medicines/create',
+            href: '/medicines/create',
             icon: BeakerIcon,
             color: 'bg-gradient-to-br from-blue-500 to-blue-600'
           },
           {
             title: 'Restock Medicines',
             description: 'Update medicine stock levels',
-            href: '/dashboard/medicines/restock',
+            href: '/medicines/restock',
             icon: BeakerIcon,
             color: 'bg-gradient-to-br from-green-500 to-green-600'
           },
           {
             title: 'Process Prescriptions',
             description: 'Handle pending prescriptions',
-            href: '/dashboard/prescriptions',
+            href: '/prescriptions',
             icon: ClipboardDocumentListIcon,
             color: 'bg-gradient-to-br from-orange-500 to-orange-600'
           }
         ];
 
-      case 'patient':
+      case 'PATIENT':
         return [
           {
             title: 'My Appointments',
             description: 'View your appointments',
-            href: '/dashboard/appointments',
+            href: '/appointments',
             icon: CalendarDaysIcon,
             color: 'bg-gradient-to-br from-blue-500 to-blue-600'
           },
           {
             title: 'My Bills',
             description: 'View and pay bills',
-            href: '/dashboard/bills',
+            href: '/bills',
             icon: CurrencyDollarIcon,
             color: 'bg-gradient-to-br from-green-500 to-green-600'
           },
           {
             title: 'My Policies',
             description: 'Manage insurance policies',
-            href: '/dashboard/policies',
+            href: '/policies',
             icon: ShieldCheckIcon,
             color: 'bg-gradient-to-br from-purple-500 to-purple-600'
           }
@@ -365,7 +365,7 @@ export default function DashboardPage() {
 
   const getStatsCards = () => {
     switch (user?.role) {
-      case 'admin':
+      case 'ADMIN':
         return [
           {
             title: 'Total Appointments',
@@ -401,7 +401,7 @@ export default function DashboardPage() {
           }
         ];
 
-      case 'doctor':
+      case 'DOCTOR':
         return [
           {
             title: 'My Appointments',
@@ -421,7 +421,7 @@ export default function DashboardPage() {
           }
         ];
 
-      case 'nurse':
+      case 'NURSE':
         return [
           {
             title: 'Appointments',
@@ -441,7 +441,7 @@ export default function DashboardPage() {
           }
         ];
 
-      case 'pharmacist':
+      case 'PHARMACIST':
         return [
           {
             title: 'Total Medicines',
@@ -461,7 +461,7 @@ export default function DashboardPage() {
           }
         ];
 
-      case 'patient':
+      case 'PATIENT':
         return [
           {
             title: 'My Appointments',
@@ -520,7 +520,7 @@ export default function DashboardPage() {
               Hi, {user?.name}!
             </h1>
             <p className="text-gray-600 capitalize">
-              {user?.role} Dashboard • {new Date().toLocaleDateString('en-US', {
+              {user?.role} Dashboard • {new Date().toLocaleDateString('en-ID', {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
@@ -579,10 +579,10 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
             <Link 
-              href={user?.role === 'doctor' ? '/dashboard/appointments' : 
-                   user?.role === 'nurse' ? '/dashboard/reservations' :
-                   user?.role === 'pharmacist' ? '/dashboard/prescriptions' :
-                   '/dashboard/appointments'}
+              href={user?.role === 'DOCTOR' ? '/appointments' : 
+                   user?.role === 'NURSE' ? '/reservations' :
+                   user?.role === 'PHARMACIST' ? '/prescriptions' :
+                   '/appointments'}
               className="text-blue-600 hover:text-blue-500 text-sm font-medium"
             >
               View all →
@@ -593,7 +593,7 @@ export default function DashboardPage() {
             {recentItems.slice(0, 5).map((item, index) => (
               <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
-                  {user?.role === 'doctor' && (
+                  {user?.role === 'DOCTOR' && (
                     <>
                       <CalendarDaysIcon className="w-5 h-5 text-blue-600" />
                       <div>
@@ -607,7 +607,7 @@ export default function DashboardPage() {
                     </>
                   )}
                   
-                  {user?.role === 'nurse' && (
+                  {user?.role === 'NURSE' && (
                     <>
                       <BuildingOfficeIcon className="w-5 h-5 text-purple-600" />
                       <div>
@@ -621,7 +621,7 @@ export default function DashboardPage() {
                     </>
                   )}
                   
-                  {user?.role === 'pharmacist' && (
+                  {user?.role === 'PHARMACIST' && (
                     <>
                       <ClipboardDocumentListIcon className="w-5 h-5 text-green-600" />
                       <div>
@@ -635,7 +635,7 @@ export default function DashboardPage() {
                     </>
                   )}
                   
-                  {user?.role === 'patient' && (
+                  {user?.role === 'PATIENT' && (
                     <>
                       <CalendarDaysIcon className="w-5 h-5 text-blue-600" />
                       <div>
@@ -668,7 +668,7 @@ export default function DashboardPage() {
       )}
 
       {/* Patient-specific information */}
-      {user?.role === 'patient' && user.patient && (
+      {user?.role === 'PATIENT' && user.patient && (
         <div className="card">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">My Insurance Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

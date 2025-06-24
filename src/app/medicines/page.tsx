@@ -43,7 +43,7 @@ export default function MedicinesPage() {
   useEffect(() => {
     // Debounced search
     const debouncedFetch = debounce(fetchMedicines, 500);
-    
+
     if (searchTerm !== '') {
       debouncedFetch();
     } else {
@@ -110,18 +110,75 @@ export default function MedicinesPage() {
         
         <div className="flex items-center space-x-3">
           {canRestock && (
-            <Link href="/dashboard/medicines/restock" className="btn-outline flex items-center space-x-2">
+            <Link href="/medicines/restock" className="btn-outline flex items-center space-x-2">
               <ArrowPathIcon className="w-5 h-5" />
               <span>Restock Medicines</span>
             </Link>
           )}
           
           {canAddMedicine && (
-            <Link href="/dashboard/medicines/create" className="btn-primary flex items-center space-x-2">
+            <Link href="/medicines/create" className="btn-primary flex items-center space-x-2">
               <PlusIcon className="w-5 h-5" />
               <span>Add Medicine</span>
             </Link>
           )}
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="card">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <BeakerIcon className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Total Medicines</p>
+              <p className="text-2xl font-bold text-gray-900">{medicines.length}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <BeakerIcon className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">In Stock</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {medicines.filter(m => m.stock > 10).length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <BeakerIcon className="w-6 h-6 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Low Stock</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {medicines.filter(m => m.stock > 0 && m.stock <= 10).length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+              <BeakerIcon className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Out of Stock</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {medicines.filter(m => m.stock === 0).length}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -271,7 +328,7 @@ export default function MedicinesPage() {
                     </td>
                     <td className="table-cell">
                       <Link
-                        href={`/dashboard/medicines/${medicine.id}`}
+                        href={`/medicines/${medicine.id}`}
                         className="btn-sm btn-outline flex items-center space-x-1"
                       >
                         <EyeIcon className="w-4 h-4" />
@@ -311,63 +368,6 @@ export default function MedicinesPage() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <BeakerIcon className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total Medicines</p>
-              <p className="text-2xl font-bold text-gray-900">{medicines.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <BeakerIcon className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">In Stock</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {medicines.filter(m => m.stock > 10).length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <BeakerIcon className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Low Stock</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {medicines.filter(m => m.stock > 0 && m.stock <= 10).length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <BeakerIcon className="w-6 h-6 text-red-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Out of Stock</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {medicines.filter(m => m.stock === 0).length}
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

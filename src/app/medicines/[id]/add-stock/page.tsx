@@ -51,7 +51,7 @@ export default function AddStockPage() {
     } catch (error) {
       console.error('Failed to fetch medicine:', error);
       toast.error('Failed to load medicine details');
-      router.push('/dashboard/medicines');
+      router.push('/medicines');
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export default function AddStockPage() {
       setSubmitting(true);
       await apiClient.updateMedicineStock(params.id as string, quantity);
       toast.success(`Successfully added ${quantity} units to stock`);
-      router.push(`/dashboard/medicines/${params.id}`);
+      router.push(`/medicines/${params.id}`);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update stock');
     } finally {

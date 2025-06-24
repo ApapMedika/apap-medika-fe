@@ -42,8 +42,7 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Redirect if not admin
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'ADMIN') {
     return (
       <div className="card text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
@@ -410,7 +409,7 @@ export default function UsersPage() {
                     
                     <td className="table-cell">
                       <Link
-                        href={`/dashboard/users/${user.id}`}
+                        href={`/users/${user.id}`}
                         className="btn-sm btn-outline flex items-center space-x-1"
                       >
                         <EyeIcon className="w-4 h-4" />

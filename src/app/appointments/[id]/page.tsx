@@ -88,7 +88,7 @@ export default function AppointmentDetailPage() {
     } catch (error) {
       console.error('Failed to fetch appointment:', error);
       toast.error('Failed to load appointment details');
-      router.push('/dashboard/appointments');
+      router.push('/appointments');
     } finally {
       setLoading(false);
     }
@@ -146,7 +146,7 @@ export default function AppointmentDetailPage() {
       setActionLoading(true);
       await apiClient.deleteAppointment(appointment.id);
       toast.success('Appointment deleted successfully');
-      router.push('/dashboard/appointments');
+      router.push('/appointments');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete appointment');
     } finally {
@@ -205,7 +205,7 @@ export default function AppointmentDetailPage() {
       <div className="card text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Appointment Not Found</h1>
         <p className="text-gray-600 mb-4">The appointment you're looking for doesn't exist.</p>
-        <Link href="/dashboard/appointments" className="btn-primary">
+        <Link href="/appointments" className="btn-primary">
           Back to Appointments
         </Link>
       </div>
@@ -371,7 +371,7 @@ export default function AppointmentDetailPage() {
               <div>
                 <p className="text-sm text-gray-600 mb-2">ID: {appointment.prescription.id}</p>
                 <Link
-                  href={`/dashboard/prescriptions/${appointment.prescription.id}`}
+                  href={`/prescriptions/${appointment.prescription.id}`}
                   className="text-blue-600 hover:text-blue-500 text-sm"
                 >
                   View Details →
@@ -382,7 +382,7 @@ export default function AppointmentDetailPage() {
                 <p className="text-sm text-gray-500 mb-3">No prescription created</p>
                 {canCreatePrescription && (
                   <Link
-                    href={`/dashboard/prescriptions/create?appointment=${appointment.id}`}
+                    href={`/prescriptions/create?appointment=${appointment.id}`}
                     className="btn-sm btn-outline"
                   >
                     Create Prescription
@@ -402,7 +402,7 @@ export default function AppointmentDetailPage() {
               <div>
                 <p className="text-sm text-gray-600 mb-2">ID: {appointment.reservation.id}</p>
                 <Link
-                  href={`/dashboard/reservations/${appointment.reservation.id}`}
+                  href={`/reservations/${appointment.reservation.id}`}
                   className="text-blue-600 hover:text-blue-500 text-sm"
                 >
                   View Details →
@@ -413,7 +413,7 @@ export default function AppointmentDetailPage() {
                 <p className="text-sm text-gray-500 mb-3">No reservation created</p>
                 {canCreateReservation && (
                   <Link
-                    href={`/dashboard/reservations/create?appointment=${appointment.id}`}
+                    href={`/reservations/create?appointment=${appointment.id}`}
                     className="btn-sm btn-outline"
                   >
                     Make Reservation

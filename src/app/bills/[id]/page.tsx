@@ -113,7 +113,7 @@ export default function BillDetailPage() {
     } catch (error) {
       console.error('Failed to fetch bill:', error);
       toast.error('Failed to load bill details');
-      router.push('/dashboard/bills');
+      router.push('/bills');
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,7 @@ export default function BillDetailPage() {
       <div className="card text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Bill Not Found</h1>
         <p className="text-gray-600 mb-4">The bill you're looking for doesn't exist.</p>
-        <Link href="/dashboard/bills" className="btn-primary">
+        <Link href="/bills" className="btn-primary">
           Back to Bills
         </Link>
       </div>
@@ -305,7 +305,7 @@ export default function BillDetailPage() {
               <p className="text-sm text-gray-600 mb-2">ID: {bill.appointment.id}</p>
               <p className="font-medium text-gray-900">{formatCurrency(bill.appointment.totalFee)}</p>
               <Link
-                href={`/dashboard/appointments/${bill.appointment.id}`}
+                href={`/appointments/${bill.appointment.id}`}
                 className="text-blue-600 hover:text-blue-500 text-sm"
               >
                 View Details →
@@ -322,7 +322,7 @@ export default function BillDetailPage() {
               <p className="text-sm text-gray-600 mb-2">ID: {bill.prescription.id}</p>
               <p className="font-medium text-gray-900">{formatCurrency(bill.prescription.totalPrice)}</p>
               <Link
-                href={`/dashboard/prescriptions/${bill.prescription.id}`}
+                href={`/prescriptions/${bill.prescription.id}`}
                 className="text-blue-600 hover:text-blue-500 text-sm"
               >
                 View Details →
@@ -339,7 +339,7 @@ export default function BillDetailPage() {
               <p className="text-sm text-gray-600 mb-2">ID: {bill.reservation.id}</p>
               <p className="font-medium text-gray-900">{formatCurrency(bill.reservation.totalFee)}</p>
               <Link
-                href={`/dashboard/reservations/${bill.reservation.id}`}
+                href={`/reservations/${bill.reservation.id}`}
                 className="text-blue-600 hover:text-blue-500 text-sm"
               >
                 View Details →

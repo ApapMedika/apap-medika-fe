@@ -37,7 +37,7 @@ export const formatDate = (date: string | Date, includeTime = false): string => 
     options.minute = '2-digit';
   }
   
-  return new Intl.DateTimeFormat('en-US', options).format(dateObj);
+  return new Intl.DateTimeFormat('en-ID', options).format(dateObj);
 };
 
 /**
@@ -63,7 +63,7 @@ export const formatTime = (date: string | Date): string => {
   
   if (isNaN(dateObj.getTime())) return '';
   
-  return dateObj.toLocaleTimeString('en-US', { 
+  return dateObj.toLocaleTimeString('en-ID', { 
     hour: '2-digit', 
     minute: '2-digit',
     hour12: false 

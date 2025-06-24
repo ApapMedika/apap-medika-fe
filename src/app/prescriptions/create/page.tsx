@@ -126,7 +126,7 @@ export default function CreatePrescriptionPage() {
       });
       
       toast.success('Prescription created successfully');
-      router.push(`/dashboard/appointments/${appointmentId}`);
+      router.push(`/appointments/${appointmentId}`);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create prescription');
     } finally {

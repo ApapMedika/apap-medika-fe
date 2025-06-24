@@ -106,7 +106,7 @@ export default function RestockMedicinesPage() {
 
       await apiClient.restockMedicines({ items: restockData });
       toast.success('Successfully restocked medicines');
-      router.push('/dashboard/medicines');
+      router.push('/medicines');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to restock medicines');
     } finally {
