@@ -7,10 +7,10 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 const roles = [
-  { value: 'doctor', label: 'Doctor' },
-  { value: 'nurse', label: 'Nurse' },
-  { value: 'pharmacist', label: 'Pharmacist' },
-  { value: 'patient', label: 'Patient' },
+  { value: 'DOCTOR', label: 'Doctor' },
+  { value: 'NURSE', label: 'Nurse' },
+  { value: 'PHARMACIST', label: 'Pharmacist' },
+  { value: 'PATIENT', label: 'Patient' },
 ];
 
 const specializations = [
@@ -89,7 +89,6 @@ export default function SignupPage() {
   };
 
   const validateForm = () => {
-    // ... (Validation logic remains the same)
     if (!formData.name || !formData.username || !formData.email || !formData.password || !formData.gender || !formData.role) {
       toast.error('Please fill in all required fields');
       return false;
@@ -105,7 +104,7 @@ export default function SignupPage() {
       return false;
     }
 
-    if (formData.role === 'patient') {
+    if (formData.role === 'PATIENT') {
       if (!formData.nik || !formData.birthPlace || !formData.birthDate || !formData.pClass) {
         toast.error('Please fill in all patient information');
         return false;
@@ -116,7 +115,7 @@ export default function SignupPage() {
       }
     }
 
-    if (formData.role === 'doctor') {
+    if (formData.role === 'DOCTOR') {
       if (!formData.specialization || !formData.yearsOfExperience || !formData.fee || formData.schedules.length === 0) {
         toast.error('Please fill in all doctor information');
         return false;
@@ -141,7 +140,7 @@ export default function SignupPage() {
         role: formData.role,
       };
 
-      if (formData.role === 'patient') {
+      if (formData.role === 'PATIENT') {
         payload.patient_data = {
           nik: formData.nik,
           birth_place: formData.birthPlace,
@@ -150,7 +149,7 @@ export default function SignupPage() {
         };
       }
 
-      if (formData.role === 'doctor') {
+      if (formData.role === 'DOCTOR') {
         payload.doctor_data = {
           specialization: parseInt(formData.specialization),
           years_of_experience: parseInt(formData.yearsOfExperience),
@@ -306,7 +305,7 @@ export default function SignupPage() {
                 </div>
 
                 {/* Patient Specific Fields */}
-                {formData.role === 'patient' && (
+                {formData.role === 'PATIENT' && (
                   <div className="space-y-4 border-t pt-6">
                     <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
                     <div>
@@ -363,7 +362,7 @@ export default function SignupPage() {
                 )}
 
                 {/* Doctor Specific Fields */}
-                {formData.role === 'doctor' && (
+                {formData.role === 'DOCTOR' && (
                   <div className="space-y-4 border-t pt-6">
                     <h3 className="text-lg font-semibold text-gray-900">Doctor Information</h3>
                     <div>

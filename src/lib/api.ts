@@ -69,22 +69,22 @@ class ApiClient {
 
   // Profile/Auth endpoints
   async login(credentials: { email: string; password: string }) {
-    const response = await this.client.post('/profile/login/', credentials);
+    const response = await this.client.post('/login/', credentials);
     return response.data;
   }
 
   async signup(userData: any) {
-    const response = await this.client.post('/profile/signup/', userData);
+    const response = await this.client.post('/signup/', userData);
     return response.data;
   }
 
   async logout() {
-    const response = await this.client.post('/profile/logout/');
+    const response = await this.client.post('/logout/');
     return response.data;
   }
 
   async getJWT(oauthData: any) {
-    const response = await this.client.post('/profile/jwt/', oauthData);
+    const response = await this.client.post('/jwt/', oauthData);
     return response.data;
   }
 

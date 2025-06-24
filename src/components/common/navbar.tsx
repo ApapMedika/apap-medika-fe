@@ -38,35 +38,35 @@ export default function Navbar() {
     if (!user) return [];
 
     switch (user.role) {
-      case 'admin':
+      case 'ADMIN':
         return [
-          { href: '/dashboard/users', label: 'Users', icon: UsersIcon },
-          { href: '/dashboard/medicines', label: 'Medicines', icon: BeakerIcon },
-          { href: '/dashboard/appointments', label: 'Appointments', icon: CalendarDaysIcon },
-          { href: '/dashboard/policies', label: 'Policies', icon: ShieldCheckIcon },
-          { href: '/dashboard/reservations', label: 'Reservations', icon: BuildingOfficeIcon },
+          { href: '/users', label: 'Users', icon: UsersIcon },
+          { href: '/medicines', label: 'Medicines', icon: BeakerIcon },
+          { href: '/appointments', label: 'Appointments', icon: CalendarDaysIcon },
+          { href: '/policies', label: 'Policies', icon: ShieldCheckIcon },
+          { href: '/reservations', label: 'Reservations', icon: BuildingOfficeIcon },
         ];
-      case 'doctor':
+      case 'DOCTOR':
         return [
-          { href: '/dashboard/appointments', label: 'Appointments', icon: CalendarDaysIcon },
+          { href: '/appointments', label: 'Appointments', icon: CalendarDaysIcon },
         ];
-      case 'nurse':
+      case 'NURSE':
         return [
-          { href: '/dashboard/appointments', label: 'Appointments', icon: CalendarDaysIcon },
-          { href: '/dashboard/reservations', label: 'Reservations', icon: BuildingOfficeIcon },
+          { href: '/appointments', label: 'Appointments', icon: CalendarDaysIcon },
+          { href: '/reservations', label: 'Reservations', icon: BuildingOfficeIcon },
         ];
-      case 'pharmacist':
+      case 'PHARMACIST':
         return [
-          { href: '/dashboard/medicines', label: 'Medicines', icon: BeakerIcon },
-          { href: '/dashboard/prescriptions', label: 'Prescriptions', icon: ClipboardDocumentListIcon },
+          { href: '/medicines', label: 'Medicines', icon: BeakerIcon },
+          { href: '/prescriptions', label: 'Prescriptions', icon: ClipboardDocumentListIcon },
         ];
-      case 'patient':
+      case 'PATIENT':
         return [
-          { href: '/dashboard/appointments', label: 'Appointments', icon: CalendarDaysIcon },
-          { href: '/dashboard/policies', label: 'Policies', icon: ShieldCheckIcon },
-          { href: '/dashboard/reservations', label: 'Reservations', icon: BuildingOfficeIcon },
-          { href: '/dashboard/prescriptions', label: 'Prescriptions', icon: ClipboardDocumentListIcon },
-          { href: '/dashboard/bills', label: 'Bills', icon: CurrencyDollarIcon },
+          { href: '/appointments', label: 'Appointments', icon: CalendarDaysIcon },
+          { href: '/policies', label: 'Policies', icon: ShieldCheckIcon },
+          { href: '/reservations', label: 'Reservations', icon: BuildingOfficeIcon },
+          { href: '/prescriptions', label: 'Prescriptions', icon: ClipboardDocumentListIcon },
+          { href: '/bills', label: 'Bills', icon: CurrencyDollarIcon },
         ];
       default:
         return [];
@@ -138,20 +138,34 @@ export default function Navbar() {
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+                    <p className="text-xs text-gray-500 capitalize">{user.role.toLowerCase()}</p>
                   </div>
                 </button>
 
                 {profileDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 border">
                     <Link
-                      href="/dashboard/profile"
+                      href="/profile"
                       className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => setProfileDropdownOpen(false)}
                     >
                       <UserCircleIcon className="w-5 h-5" />
                       <span>My Profile</span>
                     </Link>
+                    {/* Admin-specific menu items */}
+                    {user.role === 'ADMIN' && (
+                      <>
+                        <hr className="my-1" />
+                        <Link
+                          href="/patients/upgrade-class"
+                          className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          <ShieldCheckIcon className="w-5 h-5" />
+                          <span>Upgrade Patient Class</span>
+                        </Link>
+                      </>
+                    )}
                     <hr className="my-1" />
                     <button
                       onClick={() => {
@@ -210,7 +224,7 @@ export default function Navbar() {
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">{user.name}</p>
-                    <p className="text-sm text-gray-500 capitalize">{user.role}</p>
+                    <p className="text-sm text-gray-500 capitalize">{user.role.toLowerCase()}</p>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -236,13 +250,23 @@ export default function Navbar() {
                 <hr className="my-4" />
                 <div className="space-y-1">
                   <Link
-                    href="/dashboard/profile"
+                    href="/profile"
                     className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <UserCircleIcon className="w-5 h-5" />
                     <span>My Profile</span>
                   </Link>
+                  {user.role === 'ADMIN' && (
+                    <Link
+                      href="/patients/upgrade-class"
+                      className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <ShieldCheckIcon className="w-5 h-5" />
+                      <span>Upgrade Patient Class</span>
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       logout();

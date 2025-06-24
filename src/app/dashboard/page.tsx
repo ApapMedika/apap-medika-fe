@@ -517,7 +517,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Welcome back, {user?.name}!
+              Hi, {user?.name}!
             </h1>
             <p className="text-gray-600 capitalize">
               {user?.role} Dashboard • {new Date().toLocaleDateString('en-US', {
@@ -677,7 +677,7 @@ export default function DashboardPage() {
                 <ShieldCheckIcon className="w-8 h-8 text-blue-600" />
                 <div>
                   <p className="text-sm font-medium text-gray-500">Insurance Class</p>
-                  <p className="text-lg font-bold text-gray-900">Class {user.patient.pClass}</p>
+                  <p className="text-lg font-bold text-gray-900">Class {user.patient.p_class}</p>
                 </div>
               </div>
             </div>
@@ -688,7 +688,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-500">Insurance Limit</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {formatCurrency(user.patient.insuranceLimit)}
+                    {formatCurrency(user.patient.insurance_limit)}
                   </p>
                 </div>
               </div>
@@ -700,7 +700,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-500">Available Limit</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {formatCurrency(user.patient.availableLimit)}
+                    {formatCurrency(user.patient.available_limit)}
                   </p>
                 </div>
               </div>

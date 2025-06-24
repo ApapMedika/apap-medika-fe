@@ -11,18 +11,20 @@ interface User {
   email: string;
   role: string;
   gender: boolean;
-  createdAt: string;
+  created_at: string;
   patient?: {
     nik: string;
-    birthPlace: string;
-    birthDate: string;
-    pClass: number;
-    insuranceLimit: number;
-    availableLimit: number;
+    birth_place: string;
+    birth_date: string;
+    p_class: number;
+    insurance_limit: number;
+    available_limit: number;
   };
   doctor?: {
+    id: string;
     specialization: number;
-    yearsOfExperience: number;
+    specialization_display: string;
+    years_of_experience: number;
     fee: number;
     schedules: number[];
   };
@@ -39,7 +41,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -87,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (credentials: { email: string; password: string }) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/profile/login/`, {
+      const response = await fetch(`${API_BASE_URL}/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +100,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        // Handle different error responses
+        if (data.email) {
+          throw new Error(data.email[0] || 'Invalid email format');
+        }
+        if (data.password) {
+          throw new Error(data.password[0] || 'Invalid password');
+        }
+        if (data.non_field_errors) {
+          throw new Error(data.non_field_errors[0] || 'Invalid credentials');
+        }
+        throw new Error(data.message || data.detail || 'Login failed');
       }
 
       // Store token and user data
@@ -117,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signup = async (userData: any) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/profile/signup/`, {
+      const response = await fetch(`${API_BASE_URL}/signup/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -128,7 +140,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Signup failed');
+        // Handle validation errors
+        if (data.email) {
+          throw new Error(data.email[0] || 'Email validation failed');
+        }
+        if (data.username) {
+          throw new Error(data.username[0] || 'Username validation failed');
+        }
+        if (data.password) {
+          throw new Error(data.password[0] || 'Password validation failed');
+        }
+        if (data.non_field_errors) {
+          throw new Error(data.non_field_errors[0] || 'Validation failed');
+        }
+        throw new Error(data.message || data.detail || 'Signup failed');
       }
 
       // Store token and user data
@@ -152,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Try to call logout endpoint, but don't fail if it doesn't work
       if (token) {
         try {
-          await fetch(`${API_BASE_URL}/profile/logout/`, {
+          await fetch(`${API_BASE_URL}/logout/`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
