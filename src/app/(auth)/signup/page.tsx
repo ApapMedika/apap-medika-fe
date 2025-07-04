@@ -1,477 +1,612 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { HeartIcon, Eye, EyeOff } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import {
+  UserIcon,
+  EnvelopeIcon,
+  LockClosedIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  HeartIcon,
+  ArrowLeftIcon,
+  CheckCircleIcon,
+  IdentificationIcon,
+  MapPinIcon,
+  CalendarDaysIcon,
+  AcademicCapIcon,
+  StarIcon,
+  CurrencyDollarIcon,
+  ClockIcon,
+} from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
-const roles = [
-  { value: 'DOCTOR', label: 'Doctor' },
-  { value: 'NURSE', label: 'Nurse' },
-  { value: 'PHARMACIST', label: 'Pharmacist' },
-  { value: 'PATIENT', label: 'Patient' },
+const PATIENT_CLASSES = [
+  { value: 1, label: 'Class I (VIP)', description: 'Premium care with private room' },
+  { value: 2, label: 'Class II (Premium)', description: 'Semi-private room with enhanced amenities' },
+  { value: 3, label: 'Class III (Standard)', description: 'Standard care with shared facilities' },
 ];
 
-const specializations = [
-  { value: 0, label: 'General Practitioner' },
-  { value: 1, label: 'Dentist' },
-  { value: 2, label: 'Pediatrician' },
-  { value: 3, label: 'Surgery' },
-  { value: 4, label: 'Plastic, Reconstructive, and Aesthetic Surgery' },
-  { value: 5, label: 'Heart and Blood Vessels' },
-  { value: 6, label: 'Skin and Venereal Diseases' },
-  { value: 7, label: 'Eyes' },
-  { value: 8, label: 'Obstetrics and Gynecology' },
-  { value: 9, label: 'Internal Medicine' },
-  { value: 10, label: 'Lungs' },
-  { value: 11, label: 'Ear, Nose, Throat, Head and Neck Surgery' },
-  { value: 12, label: 'Radiology' },
-  { value: 13, label: 'Mental Health' },
-  { value: 14, label: 'Anesthesia' },
-  { value: 15, label: 'Neurology' },
-  { value: 16, label: 'Urology' },
+const DOCTOR_SPECIALIZATIONS = [
+  { value: 1, label: 'General Medicine' },
+  { value: 2, label: 'Pediatrics' },
+  { value: 3, label: 'Cardiology' },
+  { value: 4, label: 'Orthopedics' },
+  { value: 5, label: 'Dermatology' },
+  { value: 6, label: 'Psychiatry' },
+  { value: 7, label: 'Neurology' },
+  { value: 8, label: 'Oncology' },
+  { value: 9, label: 'Gynecology' },
+  { value: 10, label: 'Ophthalmology' },
 ];
 
-const patientClasses = [
-  { value: 1, label: 'Class 1 (Rp 100,000,000 limit)' },
-  { value: 2, label: 'Class 2 (Rp 50,000,000 limit)' },
-  { value: 3, label: 'Class 3 (Rp 25,000,000 limit)' },
-];
-
-const schedules = [
-  { value: 0, label: 'Monday' },
-  { value: 1, label: 'Tuesday' },
-  { value: 2, label: 'Wednesday' },
-  { value: 3, label: 'Thursday' },
-  { value: 4, label: 'Friday' },
-  { value: 5, label: 'Saturday' },
-  { value: 6, label: 'Sunday' },
+const DAYS_OF_WEEK = [
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
 ];
 
 export default function SignupPage() {
+  const { signup, user, loading } = useAuth();
+  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
+    // Basic Info
     name: '',
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    gender: '',
-    role: '',
+    gender: false, // false = Male, true = Female
+    role: 'PATIENT',
+    
     // Patient specific
     nik: '',
-    birthPlace: '',
-    birthDate: '',
-    pClass: '',
+    birth_place: '',
+    birth_date: '',
+    p_class: 3,
+    
     // Doctor specific
-    specialization: '',
-    yearsOfExperience: '',
-    fee: '',
+    specialization: 1,
+    years_of_experience: 1,
+    fee: 100000,
     schedules: [] as number[],
   });
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleScheduleToggle = (scheduleId: number) => {
-    setFormData(prev => ({
-      ...prev,
-      schedules: prev.schedules.includes(scheduleId)
-        ? prev.schedules.filter(id => id !== scheduleId)
-        : [...prev.schedules, scheduleId]
-    }));
-  };
-
-  const validateForm = () => {
-    if (!formData.name || !formData.username || !formData.email || !formData.password || !formData.gender || !formData.role) {
-      toast.error('Please fill in all required fields');
-      return false;
+  useEffect(() => {
+    if (user && !loading) {
+      router.push('/dashboard');
     }
+  }, [user, loading, router]);
 
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
-      return false;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+      const target = e.target as HTMLInputElement;
+      setFormData(prev => ({ ...prev, [name]: target.checked }));
+    } else if (name === 'schedules') {
+      const dayValue = parseInt(value);
+      setFormData(prev => ({
+        ...prev,
+        schedules: prev.schedules.includes(dayValue)
+          ? prev.schedules.filter(d => d !== dayValue)
+          : [...prev.schedules, dayValue]
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
-
-    if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return false;
-    }
-
-    if (formData.role === 'PATIENT') {
-      if (!formData.nik || !formData.birthPlace || !formData.birthDate || !formData.pClass) {
-        toast.error('Please fill in all patient information');
-        return false;
-      }
-      if (formData.nik.length !== 16) {
-        toast.error('NIK must be exactly 16 digits');
-        return false;
-      }
-    }
-
-    if (formData.role === 'DOCTOR') {
-      if (!formData.specialization || !formData.yearsOfExperience || !formData.fee || formData.schedules.length === 0) {
-        toast.error('Please fill in all doctor information');
-        return false;
-      }
-    }
-
-    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    
+    // Basic validation
+    if (!formData.name || !formData.username || !formData.email || !formData.password) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
-    setLoading(true);
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    // Role-specific validation
+    if (formData.role === 'PATIENT') {
+      if (!formData.nik || !formData.birth_place || !formData.birth_date) {
+        toast.error('Please fill in all patient information');
+        return;
+      }
+    }
+
+    if (formData.role === 'DOCTOR') {
+      if (!formData.specialization || !formData.years_of_experience || !formData.fee || formData.schedules.length === 0) {
+        toast.error('Please fill in all doctor information');
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
     try {
-      const payload: any = {
+      const submitData = {
         name: formData.name,
         username: formData.username,
         email: formData.email,
         password: formData.password,
-        gender: formData.gender === 'female',
+        gender: formData.gender,
         role: formData.role,
+        ...(formData.role === 'PATIENT' && {
+          nik: formData.nik,
+          birth_place: formData.birth_place,
+          birth_date: formData.birth_date,
+          p_class: formData.p_class,
+        }),
+        ...(formData.role === 'DOCTOR' && {
+          specialization: formData.specialization,
+          years_of_experience: formData.years_of_experience,
+          fee: formData.fee,
+          schedules: formData.schedules,
+        }),
       };
 
-      if (formData.role === 'PATIENT') {
-        payload.patient_data = {
-          nik: formData.nik,
-          birth_place: formData.birthPlace,
-          birth_date: formData.birthDate,
-          p_class: parseInt(formData.pClass),
-        };
-      }
-
-      if (formData.role === 'DOCTOR') {
-        payload.doctor_data = {
-          specialization: parseInt(formData.specialization),
-          years_of_experience: parseInt(formData.yearsOfExperience),
-          fee: parseFloat(formData.fee),
-          schedules: formData.schedules,
-        };
-      }
-
-      await signup(payload);
+      await signup(submitData);
+      // Success handling is done in the signup function
     } catch (error) {
-      // Error handling is done in auth context
+      // Error handling is done in the signup function
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" className="mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen flex">
-      <div className="flex-1 flex flex-col py-12 px-4 sm:px-6 lg:flex-none lg:w-3/5 xl:w-1/2 bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-y-auto">
-        <div className="mx-auto w-full max-w-lg">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <Link href="/" className="inline-flex items-center space-x-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                <HeartIcon className="h-7 w-7 text-white" />
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">       
+          <div className="flex justify-center mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
+                <HeartIcon className="w-6 h-6 text-white" />
               </div>
-              <span className="text-3xl font-bold gradient-text">ApapMedika</span>
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h1>
-            <p className="text-gray-600">Join our healthcare management system</p>
+              <h1 className="text-2xl font-bold gradient-text">
+                APAP Medika
+              </h1>
+            </div>
           </div>
+          
+          <h2 className="text-3xl font-bold text-gray-900">
+            Create your account
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Join our healthcare platform and start your journey
+          </p>
+        </div>
 
-          {/* Signup Form */}
-          <div className="card shadow-glow mb-12">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign Up</h2>
-              <p className="text-gray-600 mb-6">Fill in your information to create your account</p>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Basic Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label">Full Name *</label>
-                    <input
-                      type="text"
-                      placeholder="Enter your full name"
-                      className="form-input text-gray-900"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      required
-                    />
-                  </div>
+        <div className="card">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Basic Information */}
+            <div>
+              <div className="flex items-center space-x-3 mb-6">
+                <UserIcon className="w-6 h-6 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="name" className="form-label">
+                    Full Name *
+                  </label>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="form-input"
+                    placeholder="Enter your full name"
+                  />
+                </div>
 
-                  <div>
-                    <label className="form-label">Username *</label>
+                <div>
+                  <label htmlFor="username" className="form-label">
+                    Username *
+                  </label>
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    required
+                    value={formData.username}
+                    onChange={handleChange}
+                    className="form-input"
+                    placeholder="Choose a username"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="email" className="form-label">
+                    Email Address *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                    </div>
                     <input
-                      type="text"
-                      placeholder="Choose a username"
-                      className="form-input text-gray-900"
-                      value={formData.username}
-                      onChange={(e) => handleInputChange('username', e.target.value)}
+                      id="email"
+                      name="email"
+                      type="email"
                       required
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="form-input pl-10"
+                      placeholder="Enter your email"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="form-label">Email *</label>
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="form-input text-gray-900"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                  <label htmlFor="gender" className="form-label">
+                    Gender *
+                  </label>
+                  <select
+                    id="gender"
+                    name="gender"
+                    value={formData.gender.toString()}
+                    onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value === 'true' }))}
+                    className="form-select"
                     required
-                  />
+                  >
+                    <option value="false">Male</option>
+                    <option value="true">Female</option>
+                  </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="password" className="form-label">
+                    Password *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <LockClosedIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="form-input pl-10 pr-10"
+                      placeholder="Create a password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    >
+                      {showPassword ? (
+                        <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="confirmPassword" className="form-label">
+                    Confirm Password *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <LockClosedIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      required
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className="form-input pl-10 pr-10"
+                      placeholder="Confirm your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Role Selection */}
+            <div>
+              <label htmlFor="role" className="form-label">
+                Account Type *
+              </label>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="form-select"
+                required
+              >
+                <option value="PATIENT">Patient</option>
+                <option value="DOCTOR">Doctor</option>
+                <option value="NURSE">Nurse</option>
+                <option value="PHARMACIST">Pharmacist</option>
+                <option value="ADMIN">Administrator</option>
+              </select>
+            </div>
+
+            {/* Patient-specific fields */}
+            {formData.role === 'PATIENT' && (
+              <div>
+                <div className="flex items-center space-x-3 mb-6">
+                  <IdentificationIcon className="w-6 h-6 text-green-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="form-label">Password *</label>
+                    <label htmlFor="nik" className="form-label">
+                      NIK (ID Number) *
+                    </label>
+                    <input
+                      id="nik"
+                      name="nik"
+                      type="text"
+                      required
+                      value={formData.nik}
+                      onChange={handleChange}
+                      className="form-input"
+                      placeholder="Enter your NIK"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="birth_place" className="form-label">
+                      Birth Place *
+                    </label>
                     <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MapPinIcon className="h-5 w-5 text-gray-400" />
+                      </div>
                       <input
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Create a password"
-                        className="form-input pr-10 text-gray-900"
-                        value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        id="birth_place"
+                        name="birth_place"
+                        type="text"
                         required
+                        value={formData.birth_place}
+                        onChange={handleChange}
+                        className="form-input pl-10"
+                        placeholder="Enter your birth place"
                       />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
                     </div>
                   </div>
 
                   <div>
-                    <label className="form-label">Confirm Password *</label>
+                    <label htmlFor="birth_date" className="form-label">
+                      Birth Date *
+                    </label>
                     <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+                      </div>
                       <input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="Confirm your password"
-                        className="form-input pr-10 text-gray-900"
-                        value={formData.confirmPassword}
-                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                        id="birth_date"
+                        name="birth_date"
+                        type="date"
                         required
+                        value={formData.birth_date}
+                        onChange={handleChange}
+                        className="form-input pl-10"
                       />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
                     </div>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label">Gender *</label>
-                    <select
-                      className="form-select text-gray-900"
-                      value={formData.gender}
-                      onChange={(e) => handleInputChange('gender', e.target.value)}
-                      required
-                    >
-                      <option value="" disabled className="text-gray-400">Select gender</option>
-                      <option value="male" className="text-gray-900">Male</option>
-                      <option value="female" className="text-gray-900">Female</option>
-                    </select>
-                  </div>
 
                   <div>
-                    <label className="form-label">Role *</label>
+                    <label htmlFor="p_class" className="form-label">
+                      Patient Class *
+                    </label>
                     <select
-                      className="form-select text-gray-900"
-                      value={formData.role}
-                      onChange={(e) => handleInputChange('role', e.target.value)}
+                      id="p_class"
+                      name="p_class"
+                      value={formData.p_class}
+                      onChange={handleChange}
+                      className="form-select"
                       required
                     >
-                      <option value="" disabled className="text-gray-400">Select role</option>
-                      {roles.map((role) => (
-                        <option key={role.value} value={role.value} className="text-gray-900">
-                          {role.label}
+                      {PATIENT_CLASSES.map((pClass) => (
+                        <option key={pClass.value} value={pClass.value}>
+                          {pClass.label}
                         </option>
                       ))}
                     </select>
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Patient Specific Fields */}
-                {formData.role === 'PATIENT' && (
-                  <div className="space-y-4 border-t pt-6">
-                    <h3 className="text-lg font-semibold text-gray-900">Patient Information</h3>
-                    <div>
-                      <label className="form-label">NIK (16 digits) *</label>
+            {/* Doctor-specific fields */}
+            {formData.role === 'DOCTOR' && (
+              <div>
+                <div className="flex items-center space-x-3 mb-6">
+                  <AcademicCapIcon className="w-6 h-6 text-purple-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Doctor Information</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="specialization" className="form-label">
+                      Specialization *
+                    </label>
+                    <select
+                      id="specialization"
+                      name="specialization"
+                      value={formData.specialization}
+                      onChange={handleChange}
+                      className="form-select"
+                      required
+                    >
+                      {DOCTOR_SPECIALIZATIONS.map((spec) => (
+                        <option key={spec.value} value={spec.value}>
+                          {spec.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="years_of_experience" className="form-label">
+                      Years of Experience *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <StarIcon className="h-5 w-5 text-gray-400" />
+                      </div>
                       <input
-                        type="text"
-                        placeholder="Enter 16-digit NIK"
-                        className="form-input text-gray-900"
-                        value={formData.nik}
-                        onChange={(e) => handleInputChange('nik', e.target.value)}
-                        maxLength={16}
+                        id="years_of_experience"
+                        name="years_of_experience"
+                        type="number"
+                        min="1"
+                        max="50"
+                        required
+                        value={formData.years_of_experience}
+                        onChange={handleChange}
+                        className="form-input pl-10"
+                        placeholder="Years of experience"
                       />
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="form-label">Birth Place *</label>
-                        <input
-                          type="text"
-                          placeholder="Enter birth place"
-                          className="form-input text-gray-900"
-                          value={formData.birthPlace}
-                          onChange={(e) => handleInputChange('birthPlace', e.target.value)}
-                        />
+                  <div>
+                    <label htmlFor="fee" className="form-label">
+                      Consultation Fee (Rp) *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <CurrencyDollarIcon className="h-5 w-5 text-gray-400" />
                       </div>
-
-                      <div>
-                        <label className="form-label">Birth Date *</label>
-                        <input
-                          type="date"
-                          className="form-input text-gray-900"
-                          value={formData.birthDate}
-                          onChange={(e) => handleInputChange('birthDate', e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="form-label">Patient Class *</label>
-                      <select
-                        className="form-select text-gray-900"
-                        value={formData.pClass}
-                        onChange={(e) => handleInputChange('pClass', e.target.value)}
-                      >
-                        <option value="" disabled className="text-gray-400">Select patient class</option>
-                        {patientClasses.map((pClass) => (
-                          <option key={pClass.value} value={pClass.value.toString()} className="text-gray-900">
-                            {pClass.label}
-                          </option>
-                        ))}
-                      </select>
+                      <input
+                        id="fee"
+                        name="fee"
+                        type="number"
+                        min="50000"
+                        max="1000000"
+                        step="10000"
+                        required
+                        value={formData.fee}
+                        onChange={handleChange}
+                        className="form-input pl-10"
+                        placeholder="Consultation fee"
+                      />
                     </div>
                   </div>
-                )}
 
-                {/* Doctor Specific Fields */}
-                {formData.role === 'DOCTOR' && (
-                  <div className="space-y-4 border-t pt-6">
-                    <h3 className="text-lg font-semibold text-gray-900">Doctor Information</h3>
-                    <div>
-                      <label className="form-label">Specialization *</label>
-                      <select
-                        className="form-select text-gray-900"
-                        value={formData.specialization}
-                        onChange={(e) => handleInputChange('specialization', e.target.value)}
-                      >
-                        <option value="" disabled className="text-gray-400">Select specialization</option>
-                        {specializations.map((spec) => (
-                          <option key={spec.value} value={spec.value.toString()} className="text-gray-900">
-                            {spec.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="form-label">Years of Experience *</label>
-                        <input
-                          type="number"
-                          placeholder="Enter years of experience"
-                          className="form-input text-gray-900"
-                          value={formData.yearsOfExperience}
-                          onChange={(e) => handleInputChange('yearsOfExperience', e.target.value)}
-                          min="0"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="form-label">Consultation Fee (Rp) *</label>
-                        <input
-                          type="number"
-                          placeholder="Enter consultation fee"
-                          className="form-input text-gray-900"
-                          value={formData.fee}
-                          onChange={(e) => handleInputChange('fee', e.target.value)}
-                          min="0"
-                          step="1000"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="form-label">Practice Schedule *</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-2">
-                        {schedules.map((schedule) => (
-                          <button
-                            key={schedule.value}
-                            type="button"
-                            className={`p-2 text-sm rounded border transition-colors ${
-                              formData.schedules.includes(schedule.value)
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-white text-gray-700 border-gray-300 hover:border-blue-600 hover:text-blue-600'
-                            }`}
-                            onClick={() => handleScheduleToggle(schedule.value)}
-                          >
-                            {schedule.label}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">Select the days you will be available</p>
+                  <div>
+                    <label className="form-label">
+                      Available Days *
+                    </label>
+                    <div className="space-y-2">
+                      {DAYS_OF_WEEK.map((day) => (
+                        <label key={day.value} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            name="schedules"
+                            value={day.value}
+                            checked={formData.schedules.includes(day.value)}
+                            onChange={handleChange}
+                            className="form-checkbox"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">{day.label}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
-                )}
-
-                <button type="submit" className="w-full btn-primary" disabled={loading}>
-                  {loading ? (
-                    <div className="flex items-center justify-center">
-                      <div className="w-5 h-5 border-b-2 border-white rounded-full animate-spin mr-2"></div>
-                      Creating Account...
-                    </div>
-                  ) : (
-                    'Create Account'
-                  )}
-                </button>
-              </form>
-
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
-                  Already have an account?{' '}
-                  <Link href="/login" className="text-blue-600 hover:text-blue-500 font-medium transition-colors">
-                    Sign in here
-                  </Link>
-                </p>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            )}
 
-      {/* Right Side - Image */}
-      <div className="hidden lg:block relative flex-1">
-        <img
-          className="absolute inset-0 h-full w-full object-cover"
-          src="https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=1920&h=1080&fit=crop"
-          alt="Healthcare team collaboration"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-indigo-600/70 to-indigo-400/30 flex items-end">
-          <div className="p-12 text-white">
-            <h3 className="text-4xl font-bold mb-4">
-              Join Our Healthcare Network
-            </h3>
-            <p className="text-xl text-indigo-100">
-              Become part of a comprehensive healthcare management system that connects patients, doctors, and medical professionals.
-            </p>
-          </div>
+            {/* Submit Button */}
+            <div className="pt-6">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="btn-primary w-full"
+              >
+                {isSubmitting ? (
+                  <>
+                    <LoadingSpinner className="mr-2" />
+                    Creating account...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="w-5 h-5 mr-2" />
+                    Create Account
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Terms */}
+            <div className="text-center text-sm text-gray-500">
+              By creating an account, you agree to our{' '}
+              <Link href="/terms" className="gradient-text-hover font-medium">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="gradient-text-hover font-medium">
+                Privacy Policy
+              </Link>
+            </div>
+          </form>
+        </div>
+
+        {/* Login Link */}
+        <div className="mt-8 text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link href="/login" className="gradient-text-hover font-medium">
+              Sign in here
+            </Link>
+          </p>
         </div>
       </div>
     </div>

@@ -168,23 +168,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      const token = localStorage.getItem('token');
-      
-      if (token) {
-        try {
-          await fetch(`${API_BASE_URL}/logout/`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-        } catch (error) {
-          console.warn('Logout endpoint failed, but clearing local storage:', error);
-        }
-      }
-
-      // Clear local storage and state
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setUser(null);

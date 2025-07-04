@@ -87,6 +87,26 @@ export const formatDateTime = (date: string | Date) => {
 };
 
 /**
+ * Format date and time as a single string
+ */
+export const formatDateTimeString = (date: string | Date): string => {
+  if (!date) return '-';
+  
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  if (isNaN(dateObj.getTime())) return '-';
+  
+  return new Intl.DateTimeFormat('en-ID', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(dateObj);
+};
+
+/**
  * Get relative time (e.g., "2 hours ago", "in 3 days")
  */
 export const getRelativeTime = (date: string | Date): string => {

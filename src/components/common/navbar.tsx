@@ -1,305 +1,314 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { 
-  HeartIcon,
-  UserCircleIcon,
-  CalendarDaysIcon,
-  ClipboardDocumentListIcon,
-  BuildingOfficeIcon,
-  ShieldCheckIcon,
-  CurrencyDollarIcon,
-  UsersIcon,
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
+import {
   Bars3Icon,
   XMarkIcon,
+  HeartIcon,
+  UserGroupIcon,
+  CalendarDaysIcon,
+  BeakerIcon,
+  ShieldCheckIcon,
+  BuildingOfficeIcon,
+  DocumentTextIcon,
+  CurrencyDollarIcon,
+  ChevronDownIcon,
   ArrowRightOnRectangleIcon,
-  BeakerIcon
+  UserCircleIcon,
 } from '@heroicons/react/24/outline';
+
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<any>;
+  roles: string[];
+}
+
+const navigationItems: NavigationItem[] = [
+  {
+    name: 'Dashboard',
+    href: '/dashboard',
+    icon: HeartIcon,
+    roles: ['ADMIN', 'DOCTOR', 'NURSE', 'PHARMACIST', 'PATIENT'],
+  },
+  {
+    name: 'Users',
+    href: '/users',
+    icon: UserGroupIcon,
+    roles: ['ADMIN'],
+  },
+  {
+    name: 'Appointments',
+    href: '/appointments',
+    icon: CalendarDaysIcon,
+    roles: ['ADMIN', 'DOCTOR', 'NURSE', 'PATIENT'],
+  },
+  {
+    name: 'Medicines',
+    href: '/medicines',
+    icon: BeakerIcon,
+    roles: ['ADMIN', 'PHARMACIST', 'PATIENT'],
+  },
+  {
+    name: 'Prescriptions',
+    href: '/prescriptions',
+    icon: DocumentTextIcon,
+    roles: ['PHARMACIST', 'PATIENT'],
+  },
+  {
+    name: 'Policies',
+    href: '/policies',
+    icon: ShieldCheckIcon,
+    roles: ['ADMIN', 'PATIENT'],
+  },
+  {
+    name: 'Reservations',
+    href: '/reservations',
+    icon: BuildingOfficeIcon,
+    roles: ['ADMIN', 'NURSE', 'PATIENT'],
+  },
+  {
+    name: 'Bills',
+    href: '/bills',
+    icon: CurrencyDollarIcon,
+    roles: ['PATIENT'],
+  },
+];
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const router = useRouter();
   const pathname = usePathname();
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const handleLogout = () => {
+    logout();
+    setIsProfileMenuOpen(false);
+  };
 
-  const getNavItems = () => {
-    if (!user) return [];
+  const isActive = (href: string) => {
+    if (href === '/dashboard') {
+      return pathname === '/dashboard' || pathname === '/';
+    }
+    return pathname.startsWith(href);
+  };
 
-    switch (user.role) {
+  // Filter navigation items based on user role
+  const filteredNavItems = navigationItems.filter(item => 
+    user?.role && item.roles.includes(user.role)
+  );
+
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
       case 'ADMIN':
-        return [
-          { href: '/users', label: 'Users', icon: UsersIcon },
-          { href: '/medicines', label: 'Medicines', icon: BeakerIcon },
-          { href: '/appointments', label: 'Appointments', icon: CalendarDaysIcon },
-          { href: '/policies', label: 'Policies', icon: ShieldCheckIcon },
-          { href: '/reservations', label: 'Reservations', icon: BuildingOfficeIcon },
-        ];
+        return 'Administrator';
       case 'DOCTOR':
-        return [
-          { href: '/appointments', label: 'Appointments', icon: CalendarDaysIcon },
-        ];
+        return 'Doctor';
       case 'NURSE':
-        return [
-          { href: '/appointments', label: 'Appointments', icon: CalendarDaysIcon },
-          { href: '/reservations', label: 'Reservations', icon: BuildingOfficeIcon },
-        ];
+        return 'Nurse';
       case 'PHARMACIST':
-        return [
-          { href: '/medicines', label: 'Medicines', icon: BeakerIcon },
-          { href: '/prescriptions', label: 'Prescriptions', icon: ClipboardDocumentListIcon },
-        ];
+        return 'Pharmacist';
       case 'PATIENT':
-        return [
-          { href: '/appointments', label: 'Appointments', icon: CalendarDaysIcon },
-          { href: '/policies', label: 'Policies', icon: ShieldCheckIcon },
-          { href: '/reservations', label: 'Reservations', icon: BuildingOfficeIcon },
-          { href: '/prescriptions', label: 'Prescriptions', icon: ClipboardDocumentListIcon },
-          { href: '/bills', label: 'Bills', icon: CurrencyDollarIcon },
-        ];
+        return 'Patient';
       default:
-        return [];
+        return role;
     }
   };
 
-  const navItems = getNavItems();
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'ADMIN':
+        return 'bg-red-100 text-red-800';
+      case 'DOCTOR':
+        return 'bg-blue-100 text-blue-800';
+      case 'NURSE':
+        return 'bg-green-100 text-green-800';
+      case 'PHARMACIST':
+        return 'bg-purple-100 text-purple-800';
+      case 'PATIENT':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
-  // Hide navbar on auth pages
-  if (pathname.startsWith('/login') || pathname.startsWith('/signup')) {
-    return null;
+  if (!user) {
+    return null; // Don't render navbar for unauthenticated users
   }
 
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-white/95 backdrop-blur-sm shadow-md'
-          : 'bg-white border-b border-gray-100'
-      }`}
-    >
+    <nav className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href={user ? "/dashboard" : "/"} className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <HeartIcon className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              ApapMedika
-            </span>
-          </Link>
+        <div className="flex justify-between items-center h-16">
+          {/* Logo and Brand */}
+          <div className="flex items-center">
+            <Link href="/dashboard" className="flex items-center space-x-3">
+              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg">
+                <HeartIcon className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold gradient-text">
+                APAP Medika
+              </span>
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
-          {user && (
-            <div className="hidden md:flex items-center space-x-8">
-              {navItems.map((item) => {
-                const isActive = pathname.startsWith(item.href);
+          <div className="hidden md:flex items-center space-x-1">
+            {filteredNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`${
+                    isActive(item.href)
+                      ? 'nav-link-active'
+                      : 'nav-link'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* User Profile Dropdown */}
+          <div className="flex items-center space-x-4">
+            {/* Role Badge */}
+            <div className={`hidden sm:block badge ${getRoleBadgeColor(user.role)}`}>
+              {getRoleDisplayName(user.role)}
+            </div>
+
+            {/* Profile Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              >
+                <UserCircleIcon className="w-8 h-8 text-gray-600" />
+                <div className="hidden sm:block text-left">
+                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
+                </div>
+                <ChevronDownIcon className="w-4 h-4 text-gray-500" />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isProfileMenuOpen && (
+                <div className="dropdown-menu">
+                  <div className="py-1">
+                    <Link
+                      href="/profile"
+                      className="dropdown-item"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      <UserCircleIcon className="w-4 h-4 mr-2" />
+                      Profile
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="dropdown-item w-full text-left"
+                    >
+                      <ArrowRightOnRectangleIcon className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-200"
+              >
+                {isMobileMenuOpen ? (
+                  <XMarkIcon className="w-6 h-6" />
+                ) : (
+                  <Bars3Icon className="w-6 h-6" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 py-4">
+            <div className="space-y-1">
+              {filteredNavItems.map((item) => {
+                const Icon = item.icon;
                 return (
                   <Link
-                    key={item.href}
+                    key={item.name}
                     href={item.href}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-600'
+                    className={`flex items-center space-x-3 px-4 py-3 text-base font-medium transition-colors duration-200 ${
+                      isActive(item.href)
+                        ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600'
                         : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
                     }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <item.icon className="w-5 h-5" />
-                    <span className="text-sm font-medium">{item.label}</span>
+                    <Icon className="w-5 h-5" />
+                    <span>{item.name}</span>
                   </Link>
                 );
               })}
             </div>
-          )}
 
-          {/* User Menu */}
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">
-                      {user.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user.role.toLowerCase()}</p>
-                  </div>
-                </button>
-
-                {profileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 border">
-                    <Link
-                      href="/profile"
-                      className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      onClick={() => setProfileDropdownOpen(false)}
-                    >
-                      <UserCircleIcon className="w-5 h-5" />
-                      <span>My Profile</span>
-                    </Link>
-                    {/* Admin-specific menu items */}
-                    {user.role === 'ADMIN' && (
-                      <>
-                        <hr className="my-1" />
-                        <Link
-                          href="/patients/upgrade-class"
-                          className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                          onClick={() => setProfileDropdownOpen(false)}
-                        >
-                          <ShieldCheckIcon className="w-5 h-5" />
-                          <span>Upgrade Patient Class</span>
-                        </Link>
-                      </>
-                    )}
-                    <hr className="my-1" />
-                    <button
-                      onClick={() => {
-                        logout();
-                        setProfileDropdownOpen(false);
-                      }}
-                      className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
-                    >
-                      <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="hidden md:flex items-center space-x-4">
-                <Link
-                  href="/login"
-                  className="px-5 py-2 text-gray-700 hover:text-blue-600 transition-colors"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/signup"
-                  className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-                >
-                  Get Started
-                </Link>
-              </div>
-            )}
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2"
-            >
-              {mobileMenuOpen ? (
-                <XMarkIcon className="w-6 h-6 text-gray-700" />
-              ) : (
-                <Bars3Icon className="w-6 h-6 text-gray-700" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white rounded-lg shadow-lg p-4 mt-2">
-            {user ? (
-              <>
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-                    <span className="text-white font-medium">
-                      {user.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
+            {/* Mobile Profile Section */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="px-4 mb-4">
+                <div className="flex items-center space-x-3">
+                  <UserCircleIcon className="w-10 h-10 text-gray-600" />
                   <div>
-                    <p className="font-medium text-gray-900">{user.name}</p>
-                    <p className="text-sm text-gray-500 capitalize">{user.role.toLowerCase()}</p>
+                    <p className="text-base font-medium text-gray-900">{user.name}</p>
+                    <p className="text-sm text-gray-500">{user.email}</p>
+                    <div className={`inline-block mt-1 badge ${getRoleBadgeColor(user.role)}`}>
+                      {getRoleDisplayName(user.role)}
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-1">
-                  {navItems.map((item) => {
-                    const isActive = pathname.startsWith(item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
-                          isActive
-                            ? 'bg-blue-50 text-blue-600'
-                            : 'text-gray-700 hover:bg-gray-50'
-                        }`}
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span className="text-sm font-medium">{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-                <hr className="my-4" />
-                <div className="space-y-1">
-                  <Link
-                    href="/profile"
-                    className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <UserCircleIcon className="w-5 h-5" />
-                    <span>My Profile</span>
-                  </Link>
-                  {user.role === 'ADMIN' && (
-                    <Link
-                      href="/patients/upgrade-class"
-                      className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <ShieldCheckIcon className="w-5 h-5" />
-                      <span>Upgrade Patient Class</span>
-                    </Link>
-                  )}
-                  <button
-                    onClick={() => {
-                      logout();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left rounded-lg"
-                  >
-                    <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="space-y-2">
-                <Link
-                  href="/login"
-                  className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/signup"
-                  className="block w-full text-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Get Started
-                </Link>
               </div>
-            )}
+
+              <div className="space-y-1">
+                <Link
+                  href="/profile"
+                  className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors duration-200"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <UserCircleIcon className="w-5 h-5" />
+                  <span>Profile</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-red-600 transition-colors duration-200 w-full text-left"
+                >
+                  <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Overlay for mobile menu */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-25 z-20 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        ></div>
+      )}
     </nav>
   );
 }

@@ -1,97 +1,62 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api';
-import { formatDate, debounce } from '@/utils/format';
-import { APPOINTMENT_STATUS_LABELS } from '@/utils/constants';
+import { formatCurrency, formatDate, formatDateTimeString } from '@/utils/format';
 import {
   CalendarDaysIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
-  PlusIcon,
   EyeIcon,
-  ChartBarIcon,
+  PlusIcon,
+  FunnelIcon,
+  UserIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
+import { Appointment } from '@/types';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Pagination } from '@/components/ui/pagination';
 
-interface Appointment {
-  id: string;
-  patient: {
-    id: string;
-    name: string;
-    nik: string;
-  };
-  doctor: {
-    id: string;
-    name: string;
-    specialization: string;
-  };
-  appointmentDate: string;
-  status: number;
-  diagnosis?: string;
-  treatments?: string[];
-  createdAt: string;
-}
+const appointmentStatusMap = {
+  0: { label: 'Created', color: 'badge-warning' },
+  1: { label: 'Done', color: 'badge-success' },
+  2: { label: 'Cancelled', color: 'badge-danger' },
+};
 
 export default function AppointmentsPage() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [sortField, setSortField] = useState('appointmentDate');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<number | ''>('');
+  const [dateFromFilter, setDateFromFilter] = useState('');
+  const [dateToFilter, setDateToFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchAppointments();
-  }, [statusFilter, dateFrom, dateTo, sortField, sortOrder, currentPage]);
-
-  // Debounced search
-  useEffect(() => {
-    const debouncedFetch = debounce(fetchAppointments, 500);
-    
-    if (searchTerm !== '') {
-      debouncedFetch();
-    } else {
-      fetchAppointments();
-    }
-  }, [searchTerm]);
+  }, [currentPage, searchQuery, statusFilter, dateFromFilter, dateToFilter]);
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const params: any = {
-        page: currentPage,
-        search: searchTerm,
-        ordering: sortOrder === 'desc' ? `-${sortField}` : sortField,
-      };
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        ...(searchQuery && { search: searchQuery }),
+        ...(statusFilter !== '' && { status: statusFilter.toString() }),
+        ...(dateFromFilter && { date_from: dateFromFilter }),
+        ...(dateToFilter && { date_to: dateToFilter }),
+      });
 
-      if (statusFilter) params.status = statusFilter;
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
-
-      let data;
-      if (user?.role === 'doctor') {
-        // For doctors, get only their appointments
-        data = await apiClient.getAppointmentsByDoctor(user.id, params);
-      } else if (user?.role === 'patient') {
-        // For patients, get only their appointments
-        data = await apiClient.getAppointmentsByPatient(user.id, params);
-      } else {
-        // For admin and nurse, get all appointments
-        data = await apiClient.getAppointments(params);
-      }
-
-      setAppointments(Array.isArray(data) ? data : data.results || []);
-      
-      if (data.count) {
-        setTotalPages(Math.ceil(data.count / 10));
+      const response = await apiClient.getAppointments(params.toString());
+      setAppointments(response.results || response);
+      if (response.count) {
+        setTotalPages(Math.ceil(response.count / 10));
       }
     } catch (error) {
       console.error('Failed to fetch appointments:', error);
@@ -101,296 +66,291 @@ export default function AppointmentsPage() {
     }
   };
 
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
+  const resetFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('');
+    setDateFromFilter('');
+    setDateToFilter('');
+    setCurrentPage(1);
   };
 
-  const getStatusBadge = (status: number) => {
-    const statusLabel = APPOINTMENT_STATUS_LABELS[status as keyof typeof APPOINTMENT_STATUS_LABELS];
-    const statusClasses = {
-      0: 'badge-warning', // Created
-      1: 'badge-success', // Done
-      2: 'badge-danger',  // Cancelled
-    };
-    
+  const canCreateAppointment = user?.role === 'ADMIN';
+
+  if (loading) {
     return (
-      <span className={`badge ${statusClasses[status as keyof typeof statusClasses] || 'badge-gray'}`}>
-        {statusLabel}
-      </span>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" className="mx-auto mb-4" />
+          <p className="text-gray-600">Loading appointments...</p>
+        </div>
+      </div>
     );
-  };
-
-  const canCreateAppointment = user?.role === 'admin';
-  const canViewStatistics = ['admin', 'doctor', 'nurse'].includes(user?.role || '');
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <CalendarDaysIcon className="w-8 h-8 text-blue-600" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {user?.role === 'doctor' ? 'My Appointments' : 
-               user?.role === 'patient' ? 'My Appointments' : 'Appointments'}
-            </h1>
-            <p className="text-gray-600">
-              {user?.role === 'doctor' ? 'Manage your appointment schedule' :
-               user?.role === 'patient' ? 'View your appointments' : 'Manage all appointments'}
-            </p>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
+                <CalendarDaysIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
+                <p className="text-gray-600">Manage and view appointment schedules</p>
+              </div>
+            </div>
+
+            {canCreateAppointment && (
+              <Link href="/appointments/create" className="btn-primary">
+                <PlusIcon className="w-5 h-5 mr-2" />
+                New Appointment
+              </Link>
+            )}
           </div>
         </div>
-        
-        <div className="flex items-center space-x-3">
-          {canViewStatistics && (
-            <Link href="/appointments/statistics" className="btn-outline flex items-center space-x-2">
-              <ChartBarIcon className="w-5 h-5" />
-              <span>Statistics</span>
-            </Link>
-          )}
-          
-          {canCreateAppointment && (
-            <Link href="/appointments/create" className="btn-primary flex items-center space-x-2">
-              <PlusIcon className="w-5 h-5" />
-              <span>Create Appointment</span>
-            </Link>
-          )}
-        </div>
-      </div>
 
-      {/* Filters */}
-      <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
-          <div className="md:col-span-2">
-            <label className="form-label">Search</label>
-            <div className="relative">
-              <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                className="form-input pl-10"
-                placeholder="Search by patient or doctor name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        {/* Search and Filters */}
+        <div className="card mb-8">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1">
+              <label htmlFor="search" className="form-label">
+                Search Appointments
+              </label>
+              <div className="relative">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  id="search"
+                  type="text"
+                  placeholder="Search by patient name or doctor name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="form-input pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Filter Toggle */}
+            <div className="flex items-end">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="btn-outline"
+              >
+                <FunnelIcon className="w-5 h-5 mr-2" />
+                Filters
+              </button>
             </div>
           </div>
 
-          {/* Status Filter */}
-          <div>
-            <label className="form-label">Status</label>
-            <select
-              className="form-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">All Status</option>
-              <option value="0">Created</option>
-              <option value="1">Done</option>
-              <option value="2">Cancelled</option>
-            </select>
-          </div>
+          {/* Advanced Filters */}
+          {showFilters && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="status" className="form-label">
+                    Status
+                  </label>
+                  <select
+                    id="status"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="form-select"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="0">Created</option>
+                    <option value="1">Done</option>
+                    <option value="2">Cancelled</option>
+                  </select>
+                </div>
 
-          {/* Date Range - From */}
-          <div>
-            <label className="form-label">Date From</label>
-            <input
-              type="date"
-              className="form-input"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-          </div>
+                <div>
+                  <label htmlFor="dateFrom" className="form-label">
+                    Date From
+                  </label>
+                  <input
+                    id="dateFrom"
+                    type="date"
+                    value={dateFromFilter}
+                    onChange={(e) => setDateFromFilter(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="dateTo" className="form-label">
+                    Date To
+                  </label>
+                  <input
+                    id="dateTo"
+                    type="date"
+                    value={dateToFilter}
+                    onChange={(e) => setDateToFilter(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center space-x-4">
+                <button onClick={resetFilters} className="btn-secondary">
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-          {/* Date Range - To */}
-          <div>
-            <label className="form-label">Date To</label>
-            <input
-              type="date"
-              className="form-input"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </div>
-
-          <div className="md:col-span-3 flex items-end space-x-3">
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('');
-                setDateFrom('');
-                setDateTo('');
-                setCurrentPage(1);
-              }}
-              className="btn-outline"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Appointments Table */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th 
-                  className="table-header cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('id')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>ID</span>
-                    {sortField === 'id' && (
-                      <span className="text-blue-600">
-                        {sortOrder === 'asc' ? '↑' : '↓'}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                
-                <th 
-                  className="table-header cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('patient__user__name')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Patient</span>
-                    {sortField === 'patient__user__name' && (
-                      <span className="text-blue-600">
-                        {sortOrder === 'asc' ? '↑' : '↓'}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                
-                <th 
-                  className="table-header cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('doctor__user__name')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Doctor</span>
-                    {sortField === 'doctor__user__name' && (
-                      <span className="text-blue-600">
-                        {sortOrder === 'asc' ? '↑' : '↓'}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                
-                <th 
-                  className="table-header cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('appointmentDate')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Appointment Date</span>
-                    {sortField === 'appointmentDate' && (
-                      <span className="text-blue-600">
-                        {sortOrder === 'asc' ? '↑' : '↓'}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                
-                <th className="table-header">Status</th>
-                <th className="table-header">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="table-cell text-center py-8">
-                    <div className="flex items-center justify-center">
-                      <div className="spinner w-6 h-6"></div>
+        {/* Appointments List */}
+        {appointments.length === 0 ? (
+          <EmptyState
+            icon={CalendarDaysIcon}
+            title="No appointments found"
+            description="There are no appointments matching your search criteria."
+            action={canCreateAppointment ? {
+              label: "Create New Appointment",
+              onClick: () => window.location.href = '/appointments/create'
+            } : undefined}
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-6 lg:hidden">
+              {/* Mobile Cards */}
+              {appointments.map((appointment) => {
+                const statusInfo = appointmentStatusMap[appointment.status];
+                return (
+                  <div key={appointment.id} className="card-compact">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                          <UserIcon className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{appointment.patient.name}</h3>
+                          <p className="text-sm text-gray-600">NIK: {appointment.patient.nik}</p>
+                        </div>
+                      </div>
+                      <div className={`badge ${statusInfo.color}`}>
+                        {statusInfo.label}
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              ) : appointments.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="table-cell text-center py-8 text-gray-500">
-                    No appointments found
-                  </td>
-                </tr>
-              ) : (
-                appointments.map((appointment) => (
-                  <tr key={appointment.id} className="hover:bg-gray-50">
-                    <td className="table-cell font-mono text-sm">{appointment.id}</td>
-                    <td className="table-cell">
-                      <div>
-                        <p className="font-medium text-gray-900">{appointment.patient.name}</p>
-                        <p className="text-sm text-gray-500">{appointment.patient.nik}</p>
-                      </div>
-                    </td>
-                    <td className="table-cell">
-                      <div>
-                        <p className="font-medium text-gray-900">{appointment.doctor.name}</p>
-                        <p className="text-sm text-gray-500">{appointment.doctor.specialization}</p>
-                      </div>
-                    </td>
-                    <td className="table-cell">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {formatDate(appointment.appointmentDate)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(appointment.appointmentDate).toLocaleTimeString('en-ID', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="table-cell">
-                      {getStatusBadge(appointment.status)}
-                    </td>
-                    <td className="table-cell">
-                      <Link
-                        href={`/appointments/${appointment.id}`}
-                        className="btn-sm btn-outline flex items-center space-x-1"
-                      >
-                        <EyeIcon className="w-4 h-4" />
-                        <span>View</span>
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Page {currentPage} of {totalPages}
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="btn-outline btn-sm"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="btn-outline btn-sm"
-                >
-                  Next
-                </button>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <UserIcon className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">Dr. {appointment.doctor.name}</span>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <ClockIcon className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">
+                          {formatDateTimeString(appointment.appointmentDate)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <span className="font-semibold text-gray-900">
+                          {formatCurrency(appointment.totalFee)}
+                        </span>
+                        <Link
+                          href={`/appointments/${appointment.id}`}
+                          className="btn-outline btn-sm"
+                        >
+                          <EyeIcon className="w-4 h-4 mr-1" />
+                          View
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden lg:block">
+              <div className="table-container">
+                <table className="table">
+                  <thead className="table-header">
+                    <tr>
+                      <th className="table-header-cell">Patient</th>
+                      <th className="table-header-cell">Doctor</th>
+                      <th className="table-header-cell">Date & Time</th>
+                      <th className="table-header-cell">Status</th>
+                      <th className="table-header-cell">Fee</th>
+                      <th className="table-header-cell">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="table-body">
+                    {appointments.map((appointment) => {
+                      const statusInfo = appointmentStatusMap[appointment.status];
+                      return (
+                        <tr key={appointment.id} className="hover:bg-gray-50">
+                          <td className="table-cell">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <UserIcon className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{appointment.patient.name}</p>
+                                <p className="text-sm text-gray-500">NIK: {appointment.patient.nik}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="table-cell">
+                            <div>
+                              <p className="font-medium text-gray-900">Dr. {appointment.doctor.name}</p>
+                              <p className="text-sm text-gray-500">{appointment.doctor.specializationDisplay}</p>
+                            </div>
+                          </td>
+                          <td className="table-cell">
+                            <div>
+                              <p className="font-medium">{formatDate(appointment.appointmentDate)}</p>
+                              <p className="text-sm text-gray-500">
+                                {formatDateTimeString(appointment.appointmentDate)}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="table-cell">
+                            <div className={`badge ${statusInfo.color}`}>
+                              {statusInfo.label}
+                            </div>
+                          </td>
+                          <td className="table-cell">
+                            <span className="font-semibold text-gray-900">
+                              {formatCurrency(appointment.totalFee)}
+                            </span>
+                          </td>
+                          <td className="table-cell">
+                            <Link
+                              href={`/appointments/${appointment.id}`}
+                              className="btn-outline btn-sm"
+                            >
+                              <EyeIcon className="w-4 h-4 mr-1" />
+                              View Details
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
-          </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-8">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  showInfo={true}
+                  totalCount={appointments.length}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
